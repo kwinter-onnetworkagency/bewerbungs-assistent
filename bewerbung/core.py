@@ -20,17 +20,23 @@ def now():
 
 
 def read(path):
-    with Path(path).open(encoding="utf-8") as f:
+    with Path(path).open(encoding="utf-8-sig") as f:
         return json.load(f)
 
 
 def write(path, value):
     """Replace only after complete serialization; existing data survives failures."""
-    path = Path(path)
     data = json.dumps(value, ensure_ascii=False, indent=2, allow_nan=False) + "\n"
+    write_bytes(path, data.encode("utf-8"))
+
+
+def write_bytes(path, data):
+    path = Path(path)
+    if path.is_symlink():
+        raise ValueError("Ausgabedatei darf kein Symlink sein.")
     fd, tmp = tempfile.mkstemp(prefix=".write-", dir=path.parent)
     try:
-        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as f:
+        with os.fdopen(fd, "wb") as f:
             f.write(data)
             f.flush()
             os.fsync(f.fileno())
@@ -73,13 +79,23 @@ def identity(value, reference="", company=""):
         return f"personio:{host.split('.')[0]}:{parts[1]}"
     query = [(k, v) for k, v in parse_qsl(p.query, keep_blank_values=True)
              if not k.lower().startswith("utm_") and k.lower() not in {"gh_src", "source", "ref", "referrer"}]
-    return urlunsplit((p.scheme.lower(), p.netloc.lower(), p.path.rstrip("/"), urlencode(sorted(query)), ""))
+    return urlunsplit((p.scheme.lower(), p.netloc.lower(), p.path.rstrip("/"), urlencode(sorted(query)), p.fragment))
 
 
 def validate_profile(profile):
     if not isinstance(profile, dict) or profile.get("schema_version") != 1:
         raise ValueError("Profil: schema_version muss 1 sein.")
+    if profile.get("export_only"):
+        raise ValueError("Chat-Export ist eine Ansicht, kein lokales Originalprofil. Änderungen einzeln übernehmen; Originalprofil aus Sicherung erhalten.")
     text(profile.get("name"), "Name", 200)
+    if not isinstance(profile.get("location", ""), str):
+        raise ValueError("Profil: location muss Text sein; unbekannt als leeren Text angeben.")
+    profile.setdefault("location", "")
+    if not isinstance(profile.get("preferences", {}), dict):
+        raise ValueError("Profil: preferences muss ein Objekt sein.")
+    contact = profile.get("preferences", {}).get("contact")
+    if contact is not None and not isinstance(contact, str):
+        raise ValueError("Kontaktangaben als Text oder null angeben.")
     for key in ("facts", "target_roles"):
         if not isinstance(profile.get(key), list):
             raise ValueError(f"Profil: {key} muss eine Liste sein.")
@@ -93,6 +109,11 @@ def validate_profile(profile):
         seen.add(fid)
         text(f.get("text"), "Fakt")
         text(f.get("source"), "Faktenquelle")
+        if f.get("evidence_type", "unbekannt") not in {"nutzerangabe", "dokument", "unbekannt"}:
+            raise ValueError("Belegart muss nutzerangabe, dokument oder unbekannt sein.")
+        terms = f.get("keywords", [])
+        if not isinstance(terms, list) or any(not isinstance(t, str) or not t.strip() for t in terms):
+            raise ValueError("Fakten-keywords müssen nicht leere Texte sein.")
     for role in profile["target_roles"]:
         text(role, "Zielrolle", 200)
     return profile
@@ -137,7 +158,12 @@ class Workspace:
     def jobs(self):
         data = read(self.path("bewerbungen.json"))
         if not isinstance(data, list):
-            raise ValueError("bewerbungen.json muss eine Liste sein.")
+            raise ValueError("bewerbungen.json muss der lokale vollständige Arbeitsstand sein. Chat-Export nicht darüber kopieren.")
+        required = {"id", "company", "role", "url", "identity", "description", "status", "events", "draft", "qa", "score_manual", "score_reason"}
+        for item in data:
+            if not isinstance(item, dict) or not required <= item.keys() or not isinstance(item["events"], list):
+                raise ValueError("Unvollständiger Arbeitsstand. Exportansichten nicht als bewerbungen.json übernehmen; lokale Sicherung verwenden.")
+            identifier(item["id"])
         return data
 
     def job(self, jobs, jid):
@@ -153,7 +179,7 @@ class Workspace:
         key = identity(link, reference, company)
         with self.locked():
             jobs = self.jobs()
-            matches = [item for item in jobs if item["identity"] == key or
+            matches = [item for item in jobs if item["identity"] == key or key in item.get("identity_aliases", []) or
                        (reference and item.get("reference") and item["company"].casefold() == company.casefold()
                         and item["reference"].casefold() == reference.casefold())]
             if len(matches) > 1:
@@ -162,8 +188,14 @@ class Workspace:
                 item = matches[0]
                 if reference and item.get("reference") and item["reference"].casefold() != reference.casefold():
                     raise ValueError("Widersprüchliche Referenz zur bekannten URL. Manuell klären.")
+                changed = False
                 if reference and not item.get("reference"):
                     item["reference"] = reference
+                    changed = True
+                if key != item["identity"] and key not in item.get("identity_aliases", []):
+                    item.setdefault("identity_aliases", []).append(key)
+                    changed = True
+                if changed:
                     write(self.path("bewerbungen.json"), jobs)
                 return item, False
             jid = "job-" + hashlib.sha256(key.encode()).hexdigest()[:16]
@@ -212,6 +244,8 @@ class Workspace:
             if not isinstance(occurred, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", occurred):
                 raise ValueError("Datum benötigt Bindestriche.")
             occurred = dt.date.fromisoformat(occurred).isoformat()
+            if dt.date.fromisoformat(occurred) > dt.date.today() + dt.timedelta(days=1):
+                raise ValueError("Ereignisdatum liegt in der Zukunft.")
         except (ValueError, TypeError):
             raise ValueError("Ereignisdatum muss ein tatsächliches Datum im Format JJJJ-MM-TT sein.") from None
         if status in EVIDENCE_REQUIRED and not source:
@@ -232,10 +266,15 @@ class Workspace:
             if status == "vorbereitet" and item["qa"].get("fingerprint") != draft_fingerprint(item, self.profile()):
                 raise ValueError("Profil, Anzeige oder Entwurf geändert. Erneute Prüfung erforderlich.")
             proof = self.evidence(source) if source else None
+            if proof:
+                for other in jobs:
+                    if other["id"] != jid and any(e.get("evidence", {}).get("sha256") == proof["sha256"] for e in other["events"] if e.get("evidence")):
+                        raise ValueError("Derselbe Beleg gehört bereits zu einer anderen Stelle. Zuordnung manuell klären.")
             event = dict(status=status, occurred_on=occurred, recorded_at=now(), note=note,
                          message_id=message_id or None, evidence=proof)
             if status == "beworben" and item.get("draft"):
-                event["submitted_snapshot"] = copy.deepcopy({"draft": item["draft"], "qa": item.get("qa"),
+                event["local_draft_snapshot"] = copy.deepcopy({"assignment": "nur_lokaler_stand_bei_erfassung_kein_versandbeleg",
+                    "draft": item["draft"], "qa": item.get("qa"),
                     "facts": [f for f in self.profile()["facts"] if f["id"] in item["draft"]["fact_ids"]]})
             item["events"].append(event)
             # Older backfills are history, never a newer selection decision.

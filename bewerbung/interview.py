@@ -1,8 +1,9 @@
 """Unterbrechbares Profilinterview. Antworten bleiben als Nutzerangaben erkennbar."""
+import hashlib
 from .core import read, write, now, validate_profile, text
 
 QUESTIONS = [
-    ("location", "Wo wohnst du und in welcher Region möchtest du arbeiten?", "text"),
+    ("location", "Welcher Wohnort soll in deine Unterlagen? Nur Ort, Suchregion kommt separat.", "text"),
     ("contact", "Welche Kontaktangaben sollen in deine Unterlagen? E-Mail, Telefon, Website/Anschrift nur freiwillig.", "text"),
     ("roles", "Welche Zielrollen interessieren dich? Durch Semikolon trennen.", "list"),
     ("work_model", "Welches Arbeitsmodell passt? Präsenz, hybrid oder remote; gewünschte Bürotage gern ergänzen.", "text"),
@@ -22,7 +23,7 @@ QUESTIONS = [
     ("exceptions", "Welche bewussten Ausnahmen bei Ort, Rolle oder Gehalt würdest du einzeln erlauben?", "text"),
     ("writing", "Wie sollen deine Bewerbungen klingen? Sprache, du/Sie, Länge und gewünschter Ton.", "text"),
     ("attachments", "Welche Unterlagen möchtest du standardmäßig nutzen und welche nur auf Anfrage?", "text"),
-    ("search", "Wo soll gesucht werden und wie häufig möchtest du neue Vorschläge?", "text"),
+    ("search", "Welche Suchregion/Quellen und wie häufig neue Vorschläge?", "text"),
     ("mail", "Welche persönlichen Mailkonten/Ordner möchtest du später selbst verbinden? Was muss im Posteingang bleiben? Keine Zugangsdaten.", "text"),
     ("reports", "Wie oft und in welcher Zeitzone möchtest du Berichte? Auch ohne Änderungen?", "text"),
     ("known_applications", "Welche bereits beworbenen, besprochenen oder ausgeschlossenen Stellen sind bekannt? Titel, Firma, ID/URL und Beleg nennen.", "text"),
@@ -61,21 +62,30 @@ def interview(workspace, input_fn=input, output=print):
             raise ValueError("Interview wurde inzwischen geändert. Vor der Übernahme neu starten.")
         profile = workspace.profile()
         # Re-running the interview replaces only its own facts. Imported facts stay intact.
-        profile["facts"] = [f for f in profile["facts"] if f.get("origin") != "interview"]
+        previous = profile["facts"]
+        facts = [f for f in previous if f.get("origin") != "interview"]
         for key, _, kind in QUESTIONS:
             if kind.startswith("facts:") and answers[key]:
                 for index, value in enumerate(answers[key].split(";"), 1):
                     if value.strip():
-                        fid = f"interview-{key}-{index}"
-                        if any(f["id"] == fid for f in profile["facts"]):
+                        fid = f"interview-{key}-" + hashlib.sha256(value.strip().encode()).hexdigest()[:12]
+                        if any(f["id"] == fid for f in facts):
                             raise ValueError("Fakten-ID belegt. Importierten Fakt vor Übernahme umbenennen: " + fid)
-                        profile["facts"].append(dict(id=fid, text=text(value, "Profilfakt"),
-                            source="Nutzerangabe im geführten Interview", kind=kind.split(":")[1], origin="interview", keywords=[]))
+                        facts.append(dict(id=fid, text=text(value, "Profilfakt"),
+                            source="Nutzerangabe im geführten Interview", evidence_type="nutzerangabe", kind=kind.split(":")[1], origin="interview", keywords=[]))
+        removed = {f["id"] for f in previous} - {f["id"] for f in facts}
+        if any(removed.intersection(j.get("draft", {}).get("fact_ids", [])) for j in workspace.jobs() if j.get("draft")):
+            raise ValueError("Ein entfallender Profilfakt wird noch in einem Entwurf verwendet. Entwurfzuordnung zuerst prüfen; Profil bleibt erhalten.")
+        profile["facts"] = facts
         if answers["location"]:
             profile["location"] = answers["location"]
         if answers["roles"]:
             profile["target_roles"] = [v.strip() for v in answers["roles"].split(";") if v.strip()]
-        profile["preferences"] = {k: answers[k] for k, _, kind in QUESTIONS if not kind.startswith("facts:")}
+        prefs = dict(profile.get("preferences", {}))
+        for key, _, kind in QUESTIONS:
+            if not kind.startswith("facts:") and (answers[key] is not None or key not in prefs):
+                prefs[key] = answers[key]
+        profile["preferences"] = prefs
         profile["interview_reviewed_at"] = now()
         validate_profile(profile)
         write(workspace.path("profil.json"), profile)

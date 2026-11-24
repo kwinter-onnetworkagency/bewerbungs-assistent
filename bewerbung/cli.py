@@ -1,5 +1,6 @@
 import argparse
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -72,12 +73,14 @@ def parser():
 def convert_pdf(path):
     binary = shutil.which("soffice") or shutil.which("libreoffice")
     mac = Path("/Applications/LibreOffice.app/Contents/MacOS/soffice")
-    if not binary and mac.is_file():
-        binary = str(mac)
+    windows = Path(os.environ.get("ProgramFiles", "C:/Program Files")) / "LibreOffice/program/soffice.exe"
+    for candidate in (mac, windows):
+        if not binary and candidate.is_file():
+            binary = str(candidate)
     if not binary:
         raise ValueError(f"DOCX gespeichert: {path}. Für PDF LibreOffice lokal installieren oder in Word als PDF exportieren.")
     target = path.with_suffix(".pdf")
-    if target.exists():
+    if target.exists() or target.is_symlink():
         raise ValueError("PDF existiert bereits; nicht überschrieben.")
     result = subprocess.run([binary, "--headless", "--convert-to", "pdf", "--outdir", str(path.parent), str(path)],
                             capture_output=True, text=True, timeout=120)
@@ -112,14 +115,14 @@ def main(argv=None):
         elif a.command == "fakt":
             with w.locked():
                 profile = w.profile()
-                profile["facts"].append(dict(id=a.id, text=a.text, source=a.quelle, keywords=a.stichwort))
+                profile["facts"].append(dict(id=a.id, text=a.text, source=a.quelle, evidence_type="nutzerangabe", keywords=a.stichwort))
                 validate_profile(profile)
                 write(w.path("profil.json"), profile)
             print("Profilfakt gespeichert.")
         elif a.command == "suchanfragen":
             print("\n".join(search_queries(w.profile())))
         elif a.command == "stelle":
-            job, created = w.add(a.firma, a.rolle, a.url, Path(a.textdatei).read_text(encoding="utf-8"), a.referenz)
+            job, created = w.add(a.firma, a.rolle, a.url, Path(a.textdatei).read_text(encoding="utf-8-sig"), a.referenz)
             print(job["id"] + (" neu erfasst" if created else " bereits bekannt, unverändert"))
         elif a.command == "bewerten":
             w.score(a.id, a.score, a.grund)
@@ -127,7 +130,7 @@ def main(argv=None):
         elif a.command == "wortabgleich":
             print(json.dumps(keyword_match(w.profile(), w.job(w.jobs(), a.id)["description"]), ensure_ascii=False, indent=2))
         elif a.command == "entwurf":
-            w.draft(a.id, Path(a.textdatei).read_text(encoding="utf-8"), a.fakt)
+            w.draft(a.id, Path(a.textdatei).read_text(encoding="utf-8-sig"), a.fakt)
             print("Entwurf gespeichert. Eine vorhandene Prüfung ist durch die Änderung ungültig.")
         elif a.command == "pruefung":
             w.qa(a.id, a.inhalt, a.dokument)
@@ -151,4 +154,6 @@ def main(argv=None):
             print("Vorlage angezeigt. Es wurde kein Zeitplan angelegt.")
     except (ValueError, OSError, json.JSONDecodeError, subprocess.TimeoutExpired) as exc:
         p.exit(2, "Hinweis: " + str(exc) + "\n")
+    except (EOFError, KeyboardInterrupt):
+        p.exit(130, "\nAbgebrochen. Bereits gespeicherte Interviewantworten bleiben erhalten.\n")
 

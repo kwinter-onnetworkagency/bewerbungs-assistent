@@ -81,4 +81,6 @@ python start.py bericht
 python start.py chat-export
 ```
 
-Der Bericht erzeugt Markdown und CSV. Der Chat-Export enthält vier ausdrücklich ausgewählte Projektdateien, keine Originalbelege, E-Mailtexte oder Anhänge. Trotzdem enthält er persönliche Profilangaben. Prüfe alle Texte und Stellenlinks vor einem Upload. Chats verändern deine lokalen Daten nicht von selbst; sichere zurückgegebene Aktualisierungen bewusst.
+Der Bericht erzeugt Markdown und eine CSV mit Semikolon und UTF-8-BOM für Tabellenprogramme. Der Chat-Export enthält vier ausdrücklich ausgewählte Projektdateien, keine Originalbelege, E-Mailtexte oder Anhänge. Trotzdem enthält er persönliche Profilangaben. Prüfe alle Texte und Stellenlinks vor einem Upload.
+
+`PROFIL.json` und `ARBEITSSTAND.json` sind mit `export_only` gekennzeichnete Ansichten. Sie enthalten absichtlich nicht alle lokalen Daten. Ersetze damit niemals `profil.json` oder `bewerbungen.json`: Quellen, Belege und Historie würden verloren gehen. Lass dir aus dem Chat einzelne Änderungen vorschlagen und übernimm sie über `fakt`, `stelle` und `ereignis`. Hinweise auf frühere Bewerbungen bleiben im Export ausdrücklich ungeprüft, bis du Belege zugeordnet hast.

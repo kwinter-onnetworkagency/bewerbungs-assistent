@@ -15,6 +15,8 @@ def initialize(destination, name, roles, location, assistant):
     if dest.is_symlink() or dest.exists():
         raise ValueError("Ziel existiert bereits. Einen neuen, leeren Ordnernamen wählen; vorhandene Daten bleiben erhalten.")
     resolved = dest.resolve()
+    if resolved.is_relative_to(SOURCE):
+        raise ValueError("Persönlichen Ordner außerhalb des heruntergeladenen Quellordners anlegen.")
     for parent in (resolved, *resolved.parents):
         if (parent / ".git").exists():
             raise ValueError("Persönliche Einrichtung außerhalb eines Git-Repositories anlegen.")
@@ -62,7 +64,7 @@ def wizard(input_fn=input, output=print):
     output("Benötigt Python ab 3.11. Kein API-Schlüssel, kein Versand, keine Anmeldung durch dieses Programm.")
     name = input_fn("Wie möchtest du im Profil heißen? ").strip()
     roles = [r.strip() for r in input_fn("Welche Zielrollen? Mit Komma trennen: ").split(",") if r.strip()]
-    location = input_fn("Wohnort und gewünschtes Arbeitsmodell (freiwillig): ").strip()
+    location = input_fn("Wohnort für Unterlagen, nur Ort (freiwillig): ").strip()
     output("1 ChatGPT | 2 Claude | 3 Claude Code | 4 Codex")
     choice = input_fn("Dein Assistent [1]: ").strip() or "1"
     if choice not in {"1", "2", "3", "4"}:

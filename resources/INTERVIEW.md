@@ -26,7 +26,7 @@ Gehe diese Themen in passenden Gesprächsschritten durch. Frage nach, wenn eine 
 
 ## Ergebnis und Prüfung
 
-Erzeuge `profil.json` mit `schema_version: 1`, `name`, `target_roles`, `location`, `facts` und `preferences`. Jeder Fakt enthält `id`, `text`, `source`, optional `keywords` und `kind` (`experience`, `achievement`, `education`, `certificate`, `skill`, `language`). Verwende neutrale eindeutige IDs. Tatsächliche Quellen klar nennen; reine Nutzerangaben als solche kennzeichnen. Unbekannte Qualifikationen kommen in die Fragenliste statt in facts.
+Erzeuge `profil.json` mit `schema_version: 1`, `name`, `target_roles`, `location`, `facts` und `preferences`. `location` ist der kurze Wohnort für Unterlagen; Suchregion und Arbeitsmodell stehen separat in den Präferenzen. Jeder Fakt enthält `id`, `text`, `source` und `evidence_type` (`nutzerangabe`, `dokument` oder `unbekannt`), optional `keywords` und `kind` (`experience`, `achievement`, `education`, `certificate`, `skill`, `language`). Verwende neutrale eindeutige IDs. Tatsächliche Quellen klar nennen; reine Nutzerangaben als solche kennzeichnen. Unbekannte Qualifikationen kommen in die Fragenliste statt in facts.
 
 In `preferences` stehen Suchregion, Arbeitsmodell/Mobilität, Gehaltsziel und dessen Basis, Seniorität, Verfügbarkeit, Branchen, Muss-Bedingungen, Ausnahmen, Schreibstil, Unterlagen, Suchquellen, Mailregeln und Berichtstakt. Freitext ist zulässig; Zahlen und feste Regeln nur aus einer eindeutigen Antwort ableiten. Bekannte Bewerbungen nur mit belegtem Auswahlstatus in den Arbeitsstand übernehmen.
 

@@ -12,7 +12,7 @@ Dieser Weg braucht keine lokale Installation und keinen API-Schlüssel.
 4. Schreibe: „Führe mit mir das persönliche Bewerbungsinterview durch. Stelle jeweils eine Frage. Nutze meinen Lebenslauf als Grundlage, soweit ich ihn bereitstelle. Zeige mir am Ende Profil und Arbeitsregeln zur Prüfung.“
 5. Lade nur Unterlagen hoch, die der Dienst verarbeiten soll. Zugangsdaten und vertrauliche Unterlagen Dritter gehören nicht dazu.
 6. Prüfe das erzeugte `profil.json`, insbesondere Abschlüsse, Zeiträume, Fähigkeiten, Gehaltsbasis und Mobilität. Speichere eine lokale Kopie. Lass den Assistenten Unbekanntes als offene Frage führen.
-7. Verwende anschließend die Aufgaben aus `STARTPROMPTS.md`. Lass dir bei Änderungen den aktuellen Arbeitsstand als Datei zurückgeben. Ein Chat hat keinen automatischen Schreibzugriff auf deinen lokalen Ordner.
+7. Verwende anschließend die Aufgaben aus `STARTPROMPTS.md`. Ein reines Chat-Projekt kann seinen eigenen Gesprächsstand als Datei zurückgeben. Wenn du bereits eine lokale Installation hast, übernimm nur einzelne geprüfte Änderungen über deren Befehle. Die absichtlich gekürzten Exportansichten dürfen lokale Originaldateien nicht ersetzen. Ein Chat hat keinen automatischen Schreibzugriff auf deinen lokalen Ordner.
 
 Wenn du die lokale Einrichtung benutzt hast, erzeugt `python start.py chat-export` vier Dateien in einem ZIP: `PROFIL.json`, `ARBEITSSTAND.json`, `PROJEKTANWEISUNG.txt`, `INTERVIEW.md`. Entpacke sie, lies sie gegen und füge sie einzeln deinem privaten Projekt hinzu. Ersetze veraltete Arbeitsstände bewusst; lasse keine widersprüchlichen Profilversionen im Projekt.
 

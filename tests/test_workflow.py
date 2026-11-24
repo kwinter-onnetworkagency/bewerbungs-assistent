@@ -197,6 +197,102 @@ class WorkflowTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             validate_profile(malformed)
 
+    def test_chat_views_cannot_replace_local_originals(self):
+        with zipfile.ZipFile(chat_bundle(self.w)) as z:
+            exported = json.loads(z.read("PROFIL.json"))
+            with self.assertRaises(ValueError):
+                validate_profile(exported)
+            write(self.root / "bewerbungen.json", json.loads(z.read("ARBEITSSTAND.json")))
+        with self.assertRaises(ValueError):
+            self.w.jobs()
+        write(self.root / "bewerbungen.json", [{"id": "job-1", "company": "Example"}])
+        with self.assertRaises(ValueError):
+            self.w.jobs()
+
+    def test_profile_optional_fields_and_bom(self):
+        p = {**self.profile}
+        p.pop("location")
+        self.assertEqual(validate_profile(p)["location"], "")
+        for field, value in [("preferences", None), ("location", None)]:
+            with self.assertRaises(ValueError):
+                validate_profile({**self.profile, field: value})
+        for invalid in [None, [" "], "string"]:
+            p = {**self.profile, "facts": [{**self.profile["facts"][0], "keywords": invalid}]}
+            with self.assertRaises(ValueError):
+                validate_profile(p)
+        (self.root / "profil.json").write_bytes(b'\xef\xbb\xbf' + json.dumps(self.profile).encode())
+        self.assertEqual(self.w.profile()["name"], "Alex Beispiel")
+
+    def test_untyped_user_claim_is_not_exported_as_document(self):
+        p = self.w.profile()
+        p["facts"][0]["source"] = "Nutzerangabe ohne Dokument"
+        write(self.root / "profil.json", p)
+        with zipfile.ZipFile(chat_bundle(self.w)) as z:
+            f = json.loads(z.read("PROFIL.json"))["facts"][0]
+        self.assertEqual(f["evidence_type"], "unbekannt")
+        self.assertIn("Belegart unbekannt", f["source"])
+
+    def test_interview_preserves_imported_preferences_when_skipped(self):
+        p = self.w.profile()
+        p["preferences"] = {"salary": "Bereits geklärtes Ziel", "mobility": "Kein Umzug"}
+        write(self.root / "profil.json", p)
+        answers = iter(["" for _ in QUESTIONS] + ["j"])
+        interview(self.w, lambda _: next(answers), lambda _: None)
+        self.assertEqual(self.w.profile()["preferences"]["salary"], "Bereits geklärtes Ziel")
+        self.assertEqual(self.w.profile()["preferences"]["mobility"], "Kein Umzug")
+
+    def test_interview_fact_ids_stay_stable_and_used_facts_cannot_disappear(self):
+        values = {"experience": "Ursprüngliche Station"}
+        answers = iter([values.get(k, "") for k, _, _ in QUESTIONS] + ["j"])
+        interview(self.w, lambda _: next(answers), lambda _: None)
+        fact = next(f for f in self.w.profile()["facts"] if f.get("origin") == "interview")
+        self.w.draft(self.jid, "Entwurf mit ursprünglicher Station", [fact["id"]])
+        state = read(self.root / "interview.json")
+        state["answers"]["experience"] = "Neue zusätzliche Station; Ursprüngliche Station"
+        write(self.root / "interview.json", state)
+        interview(self.w, lambda _: "j", lambda _: None)
+        self.assertEqual(next(f for f in self.w.profile()["facts"] if f["id"] == fact["id"])["text"], "Ursprüngliche Station")
+        state["answers"]["experience"] = "Neue zusätzliche Station"
+        write(self.root / "interview.json", state)
+        before = (self.root / "profil.json").read_bytes()
+        with self.assertRaises(ValueError):
+            interview(self.w, lambda _: "j", lambda _: None)
+        self.assertEqual(before, (self.root / "profil.json").read_bytes())
+
+    def test_hash_routed_jobs_and_cross_role_proof_are_distinct(self):
+        self.assertNotEqual(identity("https://jobs.example.com/#/job/1"), identity("https://jobs.example.com/#/job/2"))
+        other, _ = self.w.add("Example", "Andere Rolle", "https://jobs.example.com/2", "Zweite Anzeige")
+        self.w.record(self.jid, "absage", self.proof, "2026-01-01", "Beleg zu erster Stelle")
+        with self.assertRaises(ValueError):
+            self.w.record(other["id"], "absage", self.proof, "2026-01-01", "Gleicher Beleg ohne Message-ID")
+
+    def test_backfill_report_shows_latest_actual_date(self):
+        self.w.record(self.jid, "absage", self.proof, "2026-02-01", "Absage")
+        self.w.record(self.jid, "beworben", self.proof, "2026-01-01", "Eingang nachgetragen")
+        t = report(self.w).read_text(encoding="utf-8")
+        self.assertIn("2026-02-01 (erfasst", t)
+        self.assertNotIn("2026-01-01 (erfasst", t)
+
+    def test_pdf_dangling_symlink_is_refused(self):
+        from unittest.mock import patch
+        from bewerbung.cli import convert_pdf
+        out = render(self.w)
+        try:
+            out.with_suffix(".pdf").symlink_to(self.base / "do-not-create.pdf")
+        except OSError:
+            self.skipTest("Symlinks nicht verfügbar")
+        with patch("bewerbung.cli.shutil.which", return_value="fake-soffice"), self.assertRaises(ValueError):
+            convert_pdf(out)
+        self.assertFalse((self.base / "do-not-create.pdf").exists())
+
+    def test_internal_search_preferences_do_not_enter_cv(self):
+        p = self.w.profile()
+        p["preferences"] = {"salary": "INTERNE_WUNSCHBEDINGUNG", "work_model": "INTERNE_REMOTE_REGEL"}
+        write(self.root / "profil.json", p)
+        with zipfile.ZipFile(render(self.w)) as z:
+            content = z.read("word/document.xml").decode()
+        self.assertNotIn("INTERNE_", content)
+
     def test_documents_are_a4_xml_and_not_overwritten(self):
         out = render(self.w)
         original = out.read_bytes()
@@ -213,8 +309,8 @@ class WorkflowTest(unittest.TestCase):
         self.assertEqual(out.read_bytes(), original)
 
     def test_basic_iso_date_cannot_corrupt_chronology(self):
-        self.w.record(self.jid, "absage", self.proof, "2026-12-01", "Absage")
-        for value in ["20260101", "2026-W01-1", "2026-02-30"]:
+        self.w.record(self.jid, "absage", self.proof, "2025-12-01", "Absage")
+        for value in ["20250101", "2025-W01-1", "2025-02-30", "2999-01-01"]:
             with self.assertRaises(ValueError):
                 self.w.record(self.jid, "beworben", self.proof, value, "Alter Eingang")
         self.assertEqual(self.w.jobs()[0]["status"], "absage")
@@ -234,7 +330,8 @@ class WorkflowTest(unittest.TestCase):
         self.w.draft(self.jid, "Neue noch nicht eingereichte Fassung", ["projekt"])
         item = self.w.jobs()[0]
         self.assertEqual(item["status"], "beworben")
-        self.assertEqual(item["events"][0]["submitted_snapshot"]["draft"]["text"], "Tatsächlich eingereichte Fassung")
+        self.assertEqual(item["events"][0]["local_draft_snapshot"]["draft"]["text"], "Tatsächlich eingereichte Fassung")
+        self.assertEqual(item["events"][0]["local_draft_snapshot"]["assignment"], "nur_lokaler_stand_bei_erfassung_kein_versandbeleg")
         self.assertEqual(item["draft_history"][0]["draft"]["text"], "Tatsächlich eingereichte Fassung")
 
     def test_altered_stored_evidence_is_rejected(self):
@@ -243,6 +340,32 @@ class WorkflowTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.w.record(self.jid, "absage", self.proof, "2026-01-01", "Beleg ist verändert")
         self.assertEqual(self.w.jobs()[0]["events"], [])
+
+    def test_historical_submission_does_not_claim_current_draft_was_sent(self):
+        self.w.draft(self.jid, "Neue noch nicht eingereichte Fassung", ["projekt"])
+        self.w.record(self.jid, "beworben", self.proof, "2025-01-01", "Historischen Beleg nachgetragen")
+        event = self.w.jobs()[0]["events"][0]
+        self.assertNotIn("submitted_snapshot", event)
+        self.assertIn("kein_versandbeleg", event["local_draft_snapshot"]["assignment"])
+
+    def test_reference_alias_remains_known_without_reference(self):
+        first, _ = self.w.add("Example", "Rolle", "https://jobs.example.com/old", "Vollständige Anzeige", "123")
+        second, created = self.w.add("Example", "Rolle", "https://jobs.example.com/new", "Neue URL derselben Rolle", "123")
+        self.assertFalse(created)
+        third, created = self.w.add("Example", "Rolle", "https://jobs.example.com/new", "Bekannter alternativer Link")
+        self.assertFalse(created)
+        self.assertEqual(first["id"], second["id"])
+        self.assertEqual(first["id"], third["id"])
+
+    def test_known_application_hints_survive_chat_export_unverified(self):
+        profile = self.w.profile()
+        profile["preferences"] = {"known_applications": "Firma Beispiel, Analyst, Referenz 4711"}
+        write(self.root / "profil.json", profile)
+        with zipfile.ZipFile(chat_bundle(self.w)) as z:
+            exported = json.loads(z.read("PROFIL.json"))
+            self.assertEqual(exported["known_applications_unverified"]["text"], profile["preferences"]["known_applications"])
+            self.assertIn("keine_belegten_einreichungen", exported["known_applications_unverified"]["status"])
+            self.assertEqual(len(json.loads(z.read("ARBEITSSTAND.json"))["jobs"]), 1)
 
     def test_export_symlink_cannot_replace_profile(self):
         before = (self.root / "profil.json").read_bytes()
