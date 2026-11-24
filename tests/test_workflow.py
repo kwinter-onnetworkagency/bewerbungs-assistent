@@ -259,6 +259,25 @@ class WorkflowTest(unittest.TestCase):
             interview(self.w, lambda _: "j", lambda _: None)
         self.assertEqual(before, (self.root / "profil.json").read_bytes())
 
+    def test_interview_keeps_enriched_facts_and_deduplicates_answers(self):
+        values = {"languages": "Deutsch C2; Deutsch C2"}
+        answers = iter([values.get(k, "") for k, _, _ in QUESTIONS] + ["j"])
+        interview(self.w, lambda _: next(answers), lambda _: None)
+        p = self.w.profile()
+        facts = [f for f in p["facts"] if f.get("origin") == "interview"]
+        self.assertEqual(len(facts), 1)
+        fact = facts[0]
+        fact.update(source="Nachträglich geprüfter Beleg", evidence_type="dokument", keywords=["Deutsch"])
+        write(self.root / "profil.json", p)
+        interview(self.w, lambda _: "j", lambda _: None)
+        self.assertEqual(next(f for f in self.w.profile()["facts"] if f["id"] == fact["id"]), fact)
+
+    def test_setup_guide_uses_filtered_export(self):
+        guide = (self.root / "START_HIER.md").read_text(encoding="utf-8")
+        self.assertIn("chat-export", guide)
+        self.assertIn("Lokale Originaldateien", guide)
+        self.assertNotIn("als einzelne Dateien hochladen", guide)
+
     def test_hash_routed_jobs_and_cross_role_proof_are_distinct(self):
         self.assertNotEqual(identity("https://jobs.example.com/#/job/1"), identity("https://jobs.example.com/#/job/2"))
         other, _ = self.w.add("Example", "Andere Rolle", "https://jobs.example.com/2", "Zweite Anzeige")

@@ -15,3 +15,7 @@ Dateischreibvorgänge erfolgen mit Prozesssperre und atomarem Dateiersatz. Ein z
 Prüfnotizen werden an Profil, Anzeigeninhalt und Entwurf gebunden. Eine spätere Änderung macht die Freigabe zum Status `vorbereitet` ungültig. Die Dokumentprüfung selbst führt der Nutzer mit seinem Assistenten durch.
 
 Bewusste Grenzen: kein ATS-Autofill, keine Kontenanmeldung, kein Mailadapter, kein Kalenderadapter und keine automatisch angelegten Hintergrundroutinen. Dafür werden neutrale Arbeitsanweisungen mitgeliefert. Anbieter-/Betriebssystemzugriff lässt sich ergänzen, ohne den portablen lokalen Kern zu verändern.
+
+Chat-Dateien sind mit export_only gekennzeichnete Ansichten. Die lokale Profil-/Arbeitsstandvalidierung lehnt sie als Ersatz für vollständige Originaldateien ab. Änderungen werden gezielt übernommen. Belegart und ursprüngliche Faktenherkunft bleiben im Export sichtbar; lokale Quellenorte bleiben zurück. Bereits bekannte Bewerbungen werden als ungeprüfte Hinweise mitgegeben.
+
+Das Interview verwendet inhaltsbezogene Fakten-IDs. Noch in einem aktuellen Entwurf verwendete Fakten dürfen bei erneuter Übernahme nicht verschwinden. Leere neue Antworten löschen keine bereits geklärten Präferenzen. Ein bei der Ereigniserfassung gesicherter lokaler Entwurfsstand ist ausdrücklich kein Nachweis, dass genau diese Fassung eingereicht wurde; dafür gilt allein der vom Nutzer zugeordnete Originalbeleg.

@@ -16,6 +16,7 @@ SKIP = {".git", ".venv", "__pycache__", ".unlazy", ".claude", ".codex"}
 
 def checked_files(root=ROOT):
     files = []
+    tracked = []
     root = Path(root)
     if (root / ".git").exists():
         tracked = subprocess.run(["git", "-C", str(root), "ls-files", "-z"], capture_output=True, check=True).stdout.decode().split("\0")
@@ -29,9 +30,27 @@ def checked_files(root=ROOT):
         term_file = Path(os.environ["BEWERBUNG_PRIVATE_TERMS"])
         if term_file.resolve().is_relative_to(root.resolve()):
             raise ValueError("Private Prüfliste muss außerhalb des öffentlichen Quellordners liegen.")
-        private_terms = [x.casefold() for x in term_file.read_text(encoding="utf-8").splitlines() if len(x.strip()) >= 3]
+        private_terms = [x.strip().casefold() for x in term_file.read_text(encoding="utf-8-sig").splitlines() if len(x.strip()) >= 3]
         if not private_terms:
             raise ValueError("Private Prüfliste ist leer.")
+    def scan(rel, value):
+        checks = [r"gh[pousr]_[A-Za-z0-9_]{24,}", r"sk-[A-Za-z0-9_-]{24,}",
+                  r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----",
+                  r"/Users/[a-zA-Z][a-zA-Z0-9_.-]*/", r"/home/[a-zA-Z][a-zA-Z0-9_.-]*/",
+                  r"[A-Za-z]:\\Users\\[^\\\s]+\\", r"(?<![\w])\+[1-9]\d{0,2}[ ()/-]*\d(?:[ ()/-]*\d){7,14}(?!\d)",
+                  r"\b[A-Z]{2}\d{2}(?:[ ]?[A-Z0-9]){11,30}\b"]
+        if any(re.search(pattern, value) for pattern in checks):
+            raise ValueError("Mögliche Zugangsdaten oder persönlicher Rechnerpfad in: " + str(rel))
+        if any(term in value.casefold() for term in private_terms):
+            raise ValueError("Privater Prüfbegriff in öffentlicher Datei: " + str(rel))
+        for email in re.findall(r"[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}", value):
+            if not email.lower().endswith(("@example.com", "@example.org", "@example.net", "@users.noreply.github.com")):
+                raise ValueError("Nicht fiktive E-Mail-Adresse in öffentlicher Datei: " + str(rel))
+
+    for name in filter(None, tracked):
+        staged = subprocess.run(["git", "-C", str(root), "show", ":" + name],
+                                capture_output=True, check=True).stdout.decode("utf-8-sig")
+        scan(name + " (Git-Index)", staged)
     for f in sorted(Path(root).rglob("*")):
         rel = f.relative_to(root)
         if any(part in SKIP for part in rel.parts):
@@ -45,18 +64,7 @@ def checked_files(root=ROOT):
         if rel.as_posix() not in ROOT_FILES and not any(len(rel.parts) == len(Path(p).parts) and rel.match(p) for p in PATTERNS):
             raise ValueError("Nicht freigegebene Datei im Quellordner: " + str(rel))
         value = f.read_text(encoding="utf-8")
-        checks = [r"gh[pousr]_[A-Za-z0-9_]{24,}", r"sk-[A-Za-z0-9_-]{24,}",
-                  r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----",
-                  r"/Users/[a-zA-Z][a-zA-Z0-9_.-]*/", r"/home/[a-zA-Z][a-zA-Z0-9_.-]*/",
-                  r"[A-Za-z]:\\Users\\[^\\\s]+\\", r"(?<![\w])\+[1-9]\d{0,2}[ ()/-]*\d(?:[ ()/-]*\d){7,14}(?!\d)",
-                  r"\b[A-Z]{2}\d{2}(?:[ ]?[A-Z0-9]){11,30}\b"]
-        if any(re.search(pattern, value) for pattern in checks):
-            raise ValueError("Mögliche Zugangsdaten oder persönlicher Rechnerpfad in: " + str(rel))
-        if any(term in value.casefold() for term in private_terms):
-            raise ValueError("Privater Prüfbegriff in öffentlicher Datei: " + str(rel))
-        for email in re.findall(r"[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}", value):
-            if not email.lower().endswith(("@example.com", "@example.org", "@example.net", "@users.noreply.github.com")):
-                raise ValueError("Nicht fiktive E-Mail-Adresse in öffentlicher Datei: " + str(rel))
+        scan(rel, value)
         files.append(f)
     for name in ["README.md", "LICENSE", "start.py", "resources/INTERVIEW.md", "docs/INSTALLATION.md"]:
         if not (Path(root) / name).is_file():

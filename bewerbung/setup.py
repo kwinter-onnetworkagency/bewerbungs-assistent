@@ -50,7 +50,9 @@ def initialize(destination, name, roles, location, assistant):
             "4. Starte python start.py pruefen.\n"
             "5. Nutze resources/STARTPROMPTS.md für die erste Stellensuche.\n\n"
             "In ChatGPT/Claude im Browser: PROJEKTANWEISUNG.txt als Projektanweisung übernehmen, "
-            "profil.json sowie nach Bedarf Bericht und Arbeitsstand als einzelne Dateien hochladen. "
+            "python start.py chat-export ausführen, ZIP lokal entpacken und die vier Exportdateien "
+            "nach eigener Prüfung einzeln hochladen. Lokale Originaldateien profil.json und "
+            "bewerbungen.json nicht hochladen oder durch Exporte ersetzen. "
             "Ein ZIP allein richtet dort kein Projekt ein.\n", encoding="utf-8")
     except Exception:
         # Only this call's newly created directory, never an existing workspace.

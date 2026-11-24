@@ -45,7 +45,7 @@ Das Werkzeug versendet keine Mail, reicht keine Bewerbung ein, beantwortet keine
 
 Der öffentliche Quellcode enthält keine echten Bewerbungen oder Kandidatenprofile. Persönliche Arbeitsordner werden außerhalb von Git-Repositories angelegt. Originalnachweise und E-Mails bleiben lokal, soweit du sie nicht selbst in einen Dienst hochlädst.
 
-Ein Chat-Export enthält dein persönliches Profil. Prüfe die vier Dateien, entpacke das ZIP lokal und lade sie einzeln in dein **privates** Projekt. Der Export hängt keine Originalbelege an; Texte und Stellenlinks können trotzdem persönliche Informationen enthalten. Ein lokaler Ordner ist nicht automatisch verschlüsselt.
+Ein Chat-Export enthält dein persönliches Profil und ist eine Ansicht, kein Ersatz für deine lokalen Originaldateien. Prüfe die vier Dateien, entpacke das ZIP lokal und lade sie einzeln in dein **privates** Projekt. Der Export hängt keine Originalbelege an; Texte und Stellenlinks können trotzdem persönliche Informationen enthalten. Ein lokaler Ordner ist nicht automatisch verschlüsselt.
 
 - [Installationsanleitung und Einrichtung je Assistent](docs/INSTALLATION.md)
 - [Persönliches Interview](resources/INTERVIEW.md)

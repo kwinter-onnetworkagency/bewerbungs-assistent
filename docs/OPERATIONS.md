@@ -7,3 +7,5 @@ Kein Deploy und kein Serverbetrieb. Das Werkzeug läuft lokal mit Python ab 3.11
 Tests: `python -m unittest discover -s tests -v`. Prüfung des öffentlichen Lieferumfangs: `python scripts/check_public.py`. Installation aus sauberem Archiv: `python scripts/smoke.py`. Release-ZIP: `python scripts/package_release.py PFAD.zip`. Kein Upload persönlicher Arbeitsdaten als Release-Anhang.
 
 Versionen sind auf GitHub gekennzeichnet. Die persönliche Installation aktualisiert sich nicht selbst. Vor einem Update sichern; Anleitung in INSTALLATION.md. Profil, Interview, Bewerbungsstand, Belege und Originalunterlagen erhalten.
+
+Vor einer eigenen Veröffentlichung zusätzlich eine private Begriffsliste außerhalb des Repositories anlegen und über BEWERBUNG_PRIVATE_TERMS an check_public.py übergeben. Die generische Prüfung erkennt nicht beliebige Personendaten. Der Git-Index wird ebenfalls gegen die Allowlist geprüft; neue Geheimnisse in ausgeschlossenen, aber versehentlich getrackten Ordnern werden abgewiesen.

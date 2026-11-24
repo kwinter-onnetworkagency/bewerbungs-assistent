@@ -2,7 +2,7 @@
 
 ## Jetzt
 
-- Öffentliche Startversion mit belegtem Installationslauf und Interview bereitstellen.
+- Rückmeldungen zur veröffentlichten Startversion sammeln.
 
 ## Als Nächstes
 

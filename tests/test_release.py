@@ -10,7 +10,7 @@ import zipfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 from public_files import ROOT, checked_files
-from package_release import package
+from package_release import package, require_clean_source
 
 
 class PublicReleaseTest(unittest.TestCase):
@@ -67,6 +67,31 @@ class PublicReleaseTest(unittest.TestCase):
         subprocess.run(["git", "-C", str(self.root), "add", "-f", ".codex/cache.json"], check=True)
         with self.assertRaisesRegex(ValueError, "getrackte"):
             checked_files(self.root)
+
+    def test_staged_private_content_is_checked_even_if_worktree_cleaned(self):
+        subprocess.run(["git", "init", "-q", str(self.root)], check=True)
+        terms = Path(self.tmp.name) / "terms.txt"
+        terms.write_text("  unique-private-staged  ", encoding="utf-8-sig")
+        doc = self.root / "README.md"
+        doc.write_text("unique-private-staged.")
+        subprocess.run(["git", "-C", str(self.root), "add", "README.md"], check=True)
+        doc.write_text("Bereinigter Arbeitsbaum")
+        with patch.dict("os.environ", {"BEWERBUNG_PRIVATE_TERMS": str(terms)}):
+            with self.assertRaisesRegex(ValueError, "Git-Index"):
+                checked_files(self.root)
+
+    def test_release_cli_requires_committed_source(self):
+        subprocess.run(["git", "init", "-q", str(self.root)], check=True)
+        with self.assertRaisesRegex(ValueError, "sauberem"):
+            require_clean_source(self.root)
+
+    def test_release_cli_rejects_untracked_deliverables(self):
+        subprocess.run(["git", "init", "-q", str(self.root)], check=True)
+        subprocess.run(["git", "-C", str(self.root), "add", "README.md"], check=True)
+        subprocess.run(["git", "-C", str(self.root), "-c", "user.name=Test", "-c", "user.email=test@example.com",
+                        "commit", "-qm", "test source"], check=True)
+        with self.assertRaisesRegex(ValueError, "Nicht committete Datei"):
+            require_clean_source(self.root)
 
     def test_private_terms_and_contact_patterns_are_rejected(self):
         for value in ["C:" + chr(92) + "Users" + chr(92) + "person" + chr(92),

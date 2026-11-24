@@ -64,14 +64,19 @@ def interview(workspace, input_fn=input, output=print):
         # Re-running the interview replaces only its own facts. Imported facts stay intact.
         previous = profile["facts"]
         facts = [f for f in previous if f.get("origin") != "interview"]
+        old_interview = {f["id"]: f for f in previous if f.get("origin") == "interview"}
+        new_ids = set()
         for key, _, kind in QUESTIONS:
             if kind.startswith("facts:") and answers[key]:
-                for index, value in enumerate(answers[key].split(";"), 1):
+                for value in answers[key].split(";"):
                     if value.strip():
                         fid = f"interview-{key}-" + hashlib.sha256(value.strip().encode()).hexdigest()[:12]
+                        if fid in new_ids:
+                            continue
                         if any(f["id"] == fid for f in facts):
                             raise ValueError("Fakten-ID belegt. Importierten Fakt vor Übernahme umbenennen: " + fid)
-                        facts.append(dict(id=fid, text=text(value, "Profilfakt"),
+                        new_ids.add(fid)
+                        facts.append(old_interview.get(fid) or dict(id=fid, text=text(value, "Profilfakt"),
                             source="Nutzerangabe im geführten Interview", evidence_type="nutzerangabe", kind=kind.split(":")[1], origin="interview", keywords=[]))
         removed = {f["id"] for f in previous} - {f["id"] for f in facts}
         if any(removed.intersection(j.get("draft", {}).get("fact_ids", [])) for j in workspace.jobs() if j.get("draft")):
