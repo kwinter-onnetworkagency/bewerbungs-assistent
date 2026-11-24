@@ -1,0 +1,7 @@
+Prüfe die Bewerbungsrückmeldungen in meinen ausdrücklich verbundenen persönlichen Mailkonten.
+Lies zuerst Profil, Tracking, zuletzt gemeldete Message-IDs und offene Zuordnungen. Entdecke aktuelle Konten und Ordner; rufe neue Mails frisch ab. Prüfe den ganzen Zeitraum seit dem letzten belegten Abgleich, bei Bedarf paginieren.
+Lies relevante Nachrichten vollständig. Ordne bei mehreren Rollen ausschließlich über belegte Rolle/Referenz/Thread oder meine Bestätigung zu. Unklare Nachrichten im offenen Zuordnungsledger belassen, keine Statusänderung.
+Erfasse Eingangsbestätigungen separat von Absagen, Interviews und Angeboten. Gesendete Entwürfe nur mit tatsächlichem Versandbeleg als gesendet markieren. Ältere Ereignisse mit tatsächlichem Maildatum und heutiger Erfassung auseinanderhalten; Message-IDs deduplizieren.
+Erstelle den von mir gewünschten Tabellenbericht auch ohne Änderungen. Nenne offene Fristen und fehlende Abdeckung. Vollständige Serversynchronisation nur mit Beleg behaupten.
+Nichts versenden, löschen, automatisch beantworten oder zusagen. Verschieben nur nach meiner ausdrücklichen Ablageregel, mit Ziel-ID-Prüfung vor und nach der Aktion. Geschützte Nachrichten im Posteingang belassen.
+Ohne Mailwerkzeug meine bereitgestellten Originale auswerten und die fehlende Kontenabdeckung nennen. Diese Vorlage richtet weder Mailzugriff noch einen Zeitplan ein.

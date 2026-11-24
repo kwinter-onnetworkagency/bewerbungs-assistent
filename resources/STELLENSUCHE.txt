@@ -1,0 +1,6 @@
+Suche passende Stellen anhand meines belegten Profils und des aktuellen Bewerbungsstands.
+Prüfe zuerst vorhandene Rollen und frühere Vorschläge auf Dubletten. Suche mit verfügbaren Webwerkzeugen auf offiziellen Arbeitgeber- und ATS-Seiten in deutschen und englischen Titelvarianten. Lies volle Anzeigen und prüfe offene Bewerbungswege.
+Priorisiere nach belegtem Fit, Arbeitsmodell, Seniorität und veröffentlichtem Gehaltsband. Fehlende Fakten und Bänder offen benennen, keine Eigenschaften erfinden. Bekanntes nur bei wesentlicher Änderung erneut melden.
+Berichte neue passende Optionen in einer kurzen Tabelle mit Rolle, Unternehmen, Quelle/ID, Fit, Lücken und Empfehlung. Keine Unterlagen oder Einreichungen allein aus einer Suchroutine.
+Ohne Zugriff: konkreten Zugangsfehler berichten. Ohne neue passende Optionen: kurze unveränderte Statusmeldung, sofern ich regelmäßige Berichte wünsche.
+Zeitplan und Zeitzone lege ich in meinem verfügbaren Assistenten selbst fest. Diese Datei allein plant nichts.
