@@ -1,0 +1,25 @@
+# Persönliche Arbeitsdaten werden außerhalb dieses Repositories angelegt.
+private/
+workspace/
+vault/
+unterlagen/
+profile.json
+applications.json
+exports/
+.env
+.env.*
+*.eml
+*.emlx
+*.pdf
+*.docx
+*.zip
+__pycache__/
+*.py[cod]
+.venv/
+.unlazy/
+.codex/
+.claude/
+CLAUDE.md
+AGENTS.md
+MEMORY.md
+.DS_Store
