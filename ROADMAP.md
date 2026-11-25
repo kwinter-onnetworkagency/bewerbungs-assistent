@@ -15,6 +15,8 @@
 
 ## Erledigt
 
+- 25.11.2026: Arbeitsübersichten, Gehaltsvergleich, Quellenrecherche und Gesprächsvorbereitung je Stelle.
+
 - 25.11.2026: npx-Einrichtung und fünf Gesprächsaktionen ergänzt.
 
 - 24.11.2026: Eigenständiger lokaler Kern, unterbrechbares Profilinterview, vier Assistentenwege, Belegtracking und gezielte Exporte umgesetzt. Veröffentlichung wird durch Tests, Review und Releaseprüfung abgesichert.

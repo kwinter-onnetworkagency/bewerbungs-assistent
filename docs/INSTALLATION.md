@@ -7,12 +7,12 @@ Du kannst mit einem Chat-Projekt beginnen oder einen lokalen Arbeitsordner einri
 Mit [Node.js ab 20 samt npm](https://nodejs.org/) und [Git](https://git-scm.com/downloads) starte im Terminal:
 
 ```sh
-npx github:kwinter-onnetworkagency/bewerbungs-assistent#v0.2.0
+npx github:kwinter-onnetworkagency/bewerbungs-assistent#v0.3.0
 ```
 
 Beim ersten Start kann npm um Bestätigung für den Download bitten. Der Assistent fragt nach Arbeitsumgebung, Profilname und einem neuen privaten Zielordner. Öffne diesen Ordner in Claude Code und gib `/interview` ein. In Codex starte mit `$interview`. Für ChatGPT und Claude im Browser zeigt dir der Dialog die beiden benötigten Dateien. Bereits eingerichtete Ordner bleiben erhalten.
 
-Die fünf Aktionen heißen `interview`, `stellensuche`, `anschreiben`, `rueckmeldung` und `bericht`. Claude Code lädt sie aus den lokalen Projektskills, Codex aus `.agents/skills`. Im Browser deutet die Projektanweisung die eingegebene Nachricht. Falls die Oberfläche den Schrägstrich abfängt, schreibe beispielsweise „Starte /interview“.
+Die acht Aktionen heißen `interview`, `stellensuche`, `anschreiben`, `rueckmeldung` sowie `bericht`, `dashboard`, `gehalt` und `gespraech`. Claude Code lädt sie aus den lokalen Projektskills, Codex aus `.agents/skills`. Im Browser deutet die Projektanweisung die eingegebene Nachricht. Falls die Oberfläche den Schrägstrich abfängt, schreibe beispielsweise „Starte /interview“.
 
 ## ChatGPT oder Claude im Browser
 
@@ -109,4 +109,6 @@ Quellenstand 24.11.2026. Bedienoberflächen und Tarife können sich ändern:
 - [Claude Code: Skills aufrufen](https://code.claude.com/docs/en/skills)
 - [Codex: Skills nutzen](https://developers.openai.com/codex/skills/)
 
-Bei einem Update von v0.1.0 kopiere zusätzlich `resources/ASSISTENT.txt` in deine Projektanweisungen (eigene Regeln beibehalten). Für native Aufrufe kopiere die fünf Unterordner aus `resources/skills/` nach `.claude/skills/` (Claude Code) bzw. `.agents/skills/` (Codex). Gleichnamige eigene Skills vorher vergleichen. Öffne den persönlichen Ordner erneut.
+Bei einem Update von v0.1.0 kopiere zusätzlich `resources/ASSISTENT.txt` in deine Projektanweisungen (eigene Regeln beibehalten). Für native Aufrufe kopiere die Unterordner aus `resources/skills/` nach `.claude/skills/` (Claude Code) bzw. `.agents/skills/` (Codex). Gleichnamige eigene Skills vorher vergleichen. Öffne den persönlichen Ordner erneut.
+
+Ab Version 0.3 findest du die persönliche Übersicht in `exports/Dashboard.html`. Bestehende Installationen wie oben aktualisieren, dabei die Programmvorlagen aus `resources/` übernehmen und die eigenen Arbeitsdaten erhalten. Beim nächsten Bericht wird das Dashboard neu erzeugt. Für Browserprojekte kann [der Arbeitsleitfaden](ARBEITSPLATZ.md) zusätzlich hochgeladen werden.

@@ -1,4 +1,5 @@
 """Bewusst gewählte Exporte statt ungeprüftem Hochladen des ganzen Ordners."""
+from pathlib import Path
 import csv
 import hashlib
 import io
@@ -29,7 +30,30 @@ def report(workspace):
     md = workspace.path("exports", "BERICHT.md")
     write_bytes(md, "\n".join(lines).encode("utf-8"))
     write_bytes(workspace.path("exports", "bewerbungen.csv"), buf.getvalue().encode("utf-8-sig"))
+    dashboard(workspace, jobs)
     return md
+
+
+def dashboard(workspace, jobs):
+    template = (Path(__file__).resolve().parents[1] / "resources" / "Dashboard.html").read_text(encoding="utf-8")
+    keys = ("id", "company", "role", "status", "url", "reference", "score_manual", "score_reason", "notes", "checked_at")
+    snapshot = []
+    docs = [f.name for f in sorted(workspace.path("dokumente").glob("*"))
+            if f.is_file() and not f.is_symlink() and f.suffix in {".docx", ".pdf"}]
+    for job in jobs:
+        row = {k: job[k] for k in keys if k in job}
+        row["notes"] = [{**{k: n[k] for k in ("kind", "title", "content", "sources", "due", "done", "recorded_at") if k in n},
+                         "evidence": bool(n.get("evidence"))} for n in job.get("notes", [])]
+        row["events"] = [{k: e[k] for k in ("status", "occurred_on", "recorded_at", "note") if k in e}
+                         for e in job["events"]]
+        row["documents"] = [name for name in docs if name.startswith(job["id"] + "-")]
+        snapshot.append(row)
+    payload = json.dumps(snapshot, ensure_ascii=True).replace("<", r"\u003c")
+    before, marker, remainder = template.partition('id="snapshot">')
+    empty, end, after = remainder.partition("</script>")
+    if not marker or not end or empty.strip() != "[]":
+        raise ValueError("Dashboard-Vorlage enthält keinen leeren Datenbereich.")
+    write_bytes(workspace.path("exports", "Dashboard.html"), (before + marker + payload + end + after).encode("utf-8"))
 
 
 def chat_bundle(workspace):

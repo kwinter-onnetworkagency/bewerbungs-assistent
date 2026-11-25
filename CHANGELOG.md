@@ -1,5 +1,10 @@
 # Änderungen
 
+## 0.3.0 · 25.11.2026
+
+Persönliches Dashboard mit fünf Ansichten, Recherche bei Indeed und der Bundesagentur, Gehaltsvergleich und Gesprächsmappen je Runde.
+
+
 ## 0.2.0 (25.11.2026)
 
 - Einrichtung per npx direkt von GitHub und fünf Kurzbefehle für das private Projekt.

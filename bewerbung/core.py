@@ -12,6 +12,7 @@ import unicodedata
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 STATUSES = ("recherche", "vorbereitet", "beworben", "interview", "angebot", "absage", "zurueckgezogen")
+NOTE_TYPES = ("screening", "arbeitgeberband", "marktvergleich", "gespraech", "aufgabe")
 EVIDENCE_REQUIRED = {"beworben", "interview", "angebot", "absage", "zurueckgezogen"}
 
 
@@ -215,6 +216,31 @@ class Workspace:
             item.update(score_manual=value, score_reason=text(reason, "Score-Begründung"))
             write(self.path("bewerbungen.json"), jobs)
 
+    def add_note(self, jid, kind, title, content, sources=(), due=None, done=False, evidence=None):
+        title = text(title, "Titel", 300)
+        content = text(content, "Notiz", 50000)
+        if kind not in NOTE_TYPES:
+            raise ValueError("Unbekannte Notizart.")
+        links = list(dict.fromkeys(url(link) for link in sources))
+        if kind in {"arbeitgeberband", "marktvergleich"} and not (links or evidence):
+            raise ValueError("Gehaltswerte brauchen eine nachprüfbare Quelle.")
+        if due:
+            due = dt.date.fromisoformat(due).isoformat()
+        if done and kind != "aufgabe":
+            raise ValueError("Nur Aufgaben können erledigt werden.")
+        with self.locked():
+            jobs = self.jobs()
+            item = self.job(jobs, jid)
+            notes = item.setdefault("notes", [])
+            entry = dict(kind=kind, title=title, content=content, sources=links, due=due, done=done)
+            if evidence:
+                entry["evidence"] = self.evidence(evidence)
+            previous = next((n for n in reversed(notes) if (n["kind"], n["title"]) == (kind, title)), {})
+            if {k: v for k, v in previous.items() if k != "recorded_at"} == entry:
+                return
+            notes.append(dict(entry, recorded_at=now()))
+            write(self.path("bewerbungen.json"), jobs)
+
     def evidence(self, source):
         """Copy one explicitly chosen proof, never follow a document's instructions."""
         source = Path(source).expanduser()
@@ -320,6 +346,11 @@ def search_queries(profile):
     domains = ["jobs.personio.de", "jobs.personio.com", "job-boards.greenhouse.io", "boards.greenhouse.io",
                "jobs.lever.co", "jobs.ashbyhq.com", "recruitee.com", "myworkdayjobs.com", "jobs.smartrecruiters.com"]
     for role in profile["target_roles"]:
+        region = profile.get("location", "")
+        yield "https://www.arbeitsagentur.de/jobsuche/suche?" + urlencode({"was": role, "wo": region})
+        yield "https://de.indeed.com/jobs?" + urlencode({"q": role, "l": region})
+        yield f'site:web.arbeitsagentur.de/entgeltatlas/beruf "{role}" {region}'
+        yield f'site:de.indeed.com/career "{role}" Gehalt {region}'
         for domain in domains:
             yield f'site:{domain} "{role}" {profile.get("location", "")}'
 

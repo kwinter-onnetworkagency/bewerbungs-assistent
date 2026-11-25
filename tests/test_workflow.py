@@ -30,6 +30,35 @@ class WorkflowTest(unittest.TestCase):
         self.proof = self.base / "nachweis.txt"
         self.proof.write_text("Fiktiver Testbeleg: Absage zur Stelle aaa", encoding="utf-8")
 
+    def test_dashboard_keeps_rounds_sources_and_real_status(self):
+        from bewerbung.core import search_queries
+        from urllib.parse import parse_qs, urlsplit
+        queries = list(search_queries(dict(target_roles=["Bau & Planung"], location="Köln Süd")))
+        for domain, field in [("www.arbeitsagentur.de", "was"), ("de.indeed.com", "q")]:
+            link = next(urlsplit(q) for q in queries if q.startswith("https://" + domain + "/"))
+            self.assertEqual(parse_qs(link.query)[field], ["Bau & Planung"])
+        with self.assertRaises(ValueError):
+            self.w.add_note(self.jid, "marktvergleich", "Region", "Unbelegte Zahl")
+        self.w.add_note(self.jid, "arbeitgeberband", "Budget", "Laut Schreiben", evidence=self.proof)
+        note = (self.jid, "gespraech", "Runde eins", "Beispiel </script> aus dem Profil")
+        self.w.add_note(*note)
+        self.w.add_note(*note)
+        self.w.add_note(self.jid, "gespraech", "Runde zwei", "Weitere Fragen")
+        self.w.add_note(self.jid, "aufgabe", "Rückfragen", "Prüfen", due="2026-01-16")
+        self.w.add_note(self.jid, "aufgabe", "Rückfragen", "Erledigt", done=True)
+        (self.root / "dokumente").rmdir()  # Ein alter Arbeitsordner ohne Dokumente bleibt lesbar.
+        report(self.w)
+        html = (self.root / "exports" / "Dashboard.html").read_text(encoding="utf-8")
+        snapshot = json.loads(html.split('id="snapshot">', 1)[1].split("</script>", 1)[0])
+        self.assertEqual(len(snapshot[0]["notes"]), 5)
+        self.assertEqual(snapshot[0]["status"], "recherche")
+        self.assertTrue(snapshot[0]["notes"][0]["evidence"])
+        self.assertEqual(snapshot[0]["notes"][1]["content"], note[3])
+        self.assertNotIn('Beispiel </script>', html)
+        self.assertNotIn('sha256', html)
+        self.assertTrue(snapshot[0]["notes"][-1]["done"])
+        self.assertEqual(self.w.jobs()[0]["events"], [])
+
     def test_setup_existing_target_survives(self):
         before = (self.root / "profil.json").read_bytes()
         with self.assertRaises(ValueError):

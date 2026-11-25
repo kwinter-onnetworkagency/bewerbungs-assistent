@@ -4,3 +4,5 @@ Priorisiere nach belegtem Fit, Arbeitsmodell, Seniorität und veröffentlichtem 
 Berichte neue passende Optionen in einer kurzen Tabelle mit Rolle, Unternehmen, Quelle/ID, Fit, Lücken und Empfehlung. Keine Unterlagen oder Einreichungen allein aus einer Suchroutine.
 Ohne Zugriff: konkreten Zugangsfehler berichten. Ohne neue passende Optionen: kurze unveränderte Statusmeldung, sofern ich regelmäßige Berichte wünsche.
 Zeitplan und Zeitzone lege ich in meinem verfügbaren Assistenten selbst fest. Diese Datei allein plant nichts.
+
+Suche bei Deutschlandbezug zusätzlich in der Jobsuche der Bundesagentur für Arbeit und auf Indeed nach Rolle und Region. Nutze eine verfügbare Indeed-Verbindung für Stellen und Unternehmensinformationen oder die öffentlichen Suchseiten. Lies die Originalanzeige; dokumentiere Fundquelle, Arbeitgeberlink, Referenz und Abrufdatum. Gleiche Portal-Dubletten ab. Bei gesperrtem Zugriff genau die Quelle melden. Prüfe Arbeitgeberband und Marktwerte getrennt mit /gehalt.

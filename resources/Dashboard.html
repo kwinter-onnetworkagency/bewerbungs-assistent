@@ -1,0 +1,662 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="referrer" content="no-referrer" />
+    <title>Bewerbungsübersicht</title>
+    <style>
+      :root {
+        --bg: #f8f9fa;
+        --ink: #20272e;
+        --dim: #58636d;
+        --line: #dce1e5;
+        --accent: #245c49;
+        --soft: #edf3f0;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font:
+          15px/1.55 -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        background: var(--bg);
+        color: var(--ink);
+      }
+      aside {
+        position: fixed;
+        inset: 0 auto 0 0;
+        width: 218px;
+        padding: 30px 18px;
+        background: white;
+        border-right: 1px solid var(--line);
+      }
+      .brand {
+        font-size: 19px;
+        font-weight: 700;
+        padding: 0 12px 28px;
+      }
+      nav {
+        display: grid;
+        gap: 4px;
+      }
+      button,
+      select,
+      input {
+        font: inherit;
+      }
+      button,
+      summary {
+        cursor: pointer;
+      }
+      nav button {
+        border: 0;
+        text-align: left;
+        background: transparent;
+        color: var(--dim);
+        padding: 11px 12px;
+        border-radius: 4px;
+        font-weight: 550;
+        line-height: 1.55;
+      }
+      nav button[aria-current] {
+        color: var(--accent);
+        background: var(--soft);
+        box-shadow: inset 3px 0 var(--accent);
+      }
+      main {
+        margin-left: 218px;
+        padding: 0 36px 36px;
+        max-width: 1500px;
+      }
+      header {
+        padding: 22px 0;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+        color: var(--dim);
+      }
+      header strong {
+        margin-right: auto;
+      }
+      h1 {
+        font-size: 28px;
+        line-height: 1.25;
+        letter-spacing: -0.6px;
+        margin: 30px 0 22px;
+      }
+      h2 {
+        font-size: 19px;
+        margin: 24px 0 10px;
+      }
+      h3 {
+        font-size: 16px;
+      }
+      button,
+      select,
+      input,
+      .load {
+        color: var(--ink);
+        border: 1px solid #c5cdd3;
+        border-radius: 4px;
+        background: white;
+        padding: 7px 10px;
+      }
+      .load {
+        max-width: 100%;
+        cursor: pointer;
+      }
+      :focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+      input[type="file"] {
+        max-width: 100%;
+      }
+      .toolbar {
+        display: flex;
+        gap: 10px;
+        align-items: end;
+        flex-wrap: wrap;
+        margin: 14px 0;
+      }
+      .toolbar label {
+        display: grid;
+        gap: 4px;
+        font-size: 13px;
+        color: var(--dim);
+      }
+      article,
+      .empty,
+      .metric {
+        padding: 16px 20px;
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        background: white;
+        margin: 8px 0;
+        overflow-wrap: anywhere;
+      }
+      .row {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+      }
+      .row button {
+        font-weight: 650;
+        color: var(--accent);
+        text-align: left;
+        border: 0;
+        padding: 0;
+      }
+      .role,
+      .meta {
+        color: var(--dim);
+      }
+      .meta {
+        font-size: 13px;
+      }
+      .tag {
+        color: var(--accent);
+        background: var(--soft);
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 13px;
+      }
+      .copy {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
+        gap: 10px;
+      }
+      .metric b {
+        font-size: 25px;
+        display: block;
+      }
+      .metric {
+        margin: 0;
+      }
+      a {
+        color: var(--accent);
+      }
+      a + a {
+        margin-left: 12px;
+      }
+      p {
+        margin: 8px 0;
+      }
+      #notice {
+        color: #812c21;
+      }
+      [hidden] {
+        display: none !important;
+      }
+      @media (max-width: 700px) {
+        aside {
+          position: static;
+          width: auto;
+          padding: 18px 16px 12px;
+          border: 0;
+          border-bottom: 1px solid var(--line);
+        }
+        .brand {
+          font-size: 17px;
+          padding: 0 0 14px;
+        }
+        nav {
+          display: flex;
+          overflow-x: auto;
+        }
+        nav button {
+          padding: 9px 12px;
+          white-space: nowrap;
+        }
+        main {
+          margin: 0;
+          padding: 0 16px 28px;
+        }
+        h1 {
+          font-size: 24px;
+        }
+        header {
+          padding: 14px 0;
+        }
+        .toolbar label,
+        .toolbar input {
+          max-width: 100%;
+        }
+        .row {
+          align-items: flex-start;
+        }
+      }
+      @media print {
+        body {
+          background: white;
+        }
+        main {
+          margin: 0;
+          padding: 0;
+        }
+        aside,
+        header,
+        .toolbar,
+        .action {
+          display: none;
+        }
+        article {
+          break-inside: avoid;
+        }
+        .copy {
+          white-space: pre-wrap;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <aside>
+      <div class="brand">Bewerbungsassistent</div>
+      <nav aria-label="Ansichten"></nav>
+    </aside>
+    <main>
+      <header>
+        <strong>Mein Arbeitsstand</strong
+        ><label class="load">Arbeitsstand laden <input type="file" accept=".json" id="load" /></label
+        ><button id="print">Drucken</button>
+      </header>
+      <p role="alert" id="notice"></p>
+      <h1 id="title" tabindex="-1"></h1>
+      <div class="toolbar" id="filters">
+        <label>Unternehmen oder Stelle<input type="search" id="query" /></label
+        ><label>Status<select id="status"></select></label
+        ><label>Erfasst am<input type="date" id="date" /></label
+        ><label
+          >Reihenfolge<select id="sort">
+            <option value="score">Score</option>
+            <option value="company">Unternehmen</option>
+            <option value="recent">Zuletzt erfasst</option>
+          </select></label
+        >
+      </div>
+      <div id="content"></div>
+      <noscript>Bitte JavaScript aktivieren, um den lokalen Arbeitsstand anzuzeigen.</noscript>
+    </main>
+    <script type="application/json" id="snapshot">
+      []
+    </script>
+    <script>
+      "use strict";
+      const $ = (id) => document.getElementById(id);
+      const statuses = {
+        recherche: "Recherche",
+        vorbereitet: "Vorbereitet",
+        beworben: "Beworben",
+        interview: "Interview",
+        angebot: "Angebot",
+        absage: "Absage",
+        zurueckgezogen: "Zurückgezogen",
+      };
+      const sections = ["Heute", "Stellen", "Bewerbungen", "Gespräche", "Auswertung"];
+      const kinds = {
+        screening: "Screening",
+        arbeitgeberband: "Arbeitgeberband",
+        marktvergleich: "Marktvergleich",
+        gespraech: "Gesprächsmappe",
+        aufgabe: "Aufgabe",
+      };
+      let jobs = JSON.parse($("snapshot").textContent);
+      let section = "Heute",
+        selected = null,
+        roundTitle = null;
+      function el(tag, text, cls) {
+        const n = document.createElement(tag);
+        if (text != null) n.textContent = text;
+        if (cls) n.className = cls;
+        return n;
+      }
+      function button(text, action) {
+        const b = el("button", text);
+        b.onclick = action;
+        return b;
+      }
+      function link(text, address) {
+        try {
+          const u = new URL(address);
+          if (!["https:", "http:"].includes(u.protocol) || u.username || u.password) throw Error();
+          const a = el("a", text);
+          a.href = u.href;
+          a.target = "_blank";
+          a.rel = "noreferrer";
+          return a;
+        } catch {
+          return el("span", text);
+        }
+      }
+      function localDay(value) {
+        if (!value) return "";
+        const d = new Date(value);
+        if (!Number.isFinite(d.getTime())) return "";
+        return [
+          d.getFullYear(),
+          String(d.getMonth() + 1).padStart(2, "0"),
+          String(d.getDate()).padStart(2, "0"),
+        ].join("-");
+      }
+      function notes(job) {
+        const latest = new Map();
+        for (const n of job.notes || []) latest.set(JSON.stringify([n.kind, n.title]), n);
+        return [...latest.values()];
+      }
+      function goto(view, id = null) {
+        section = view;
+        selected = id;
+        roundTitle = null;
+        draw();
+        $("title").focus();
+      }
+      function showJob(job) {
+        goto(section, job.id);
+      }
+      function latestDate(job) {
+        return (
+          [
+            job.checked_at,
+            ...(job.events || []).map((e) => e.recorded_at),
+            ...(job.notes || []).map((n) => n.recorded_at),
+          ]
+            .filter(Boolean)
+            .sort()
+            .at(-1) || ""
+        );
+      }
+      function row(job, subtitle) {
+        const box = el("article"),
+          r = el("div", null, "row");
+        r.append(
+          button(job.company + " · " + job.role, () => showJob(job)),
+          el("span", statuses[job.status] || job.status, "tag"),
+        );
+        box.append(r);
+        if (subtitle) box.append(el("p", subtitle, "meta"));
+        return box;
+      }
+      function empty(text) {
+        return el("p", text, "empty");
+      }
+      function detail(job, root) {
+        $("title").textContent = job.company + " · " + job.role;
+        const back = button("Zur Übersicht", () => goto(section));
+        back.className = "action";
+        root.append(back);
+        if (roundTitle !== null) {
+          const n = notes(job).find((n) => n.kind === "gespraech" && n.title === roundTitle);
+          if (n) {
+            root.append(
+              el("h2", n.title),
+              el("p", n.due || "Termin offen", "meta"),
+              el("div", n.content, "copy"),
+            );
+            for (const src of n.sources || []) root.append(link(src, src));
+            return;
+          }
+        }
+        const head = el("article");
+        head.append(
+          el("strong", statuses[job.status]),
+          el("p", "Referenz: " + (job.reference || job.id)),
+          link("Originalanzeige", job.url),
+        );
+        if (job.score_manual != null)
+          head.append(el("p", "Score: " + job.score_manual + " / 100 · " + (job.score_reason || "")));
+        root.append(head);
+        for (const [kind, label] of Object.entries(kinds)) {
+          const ns = notes(job).filter((n) => n.kind === kind);
+          if (ns.length) {
+            root.append(el("h2", label));
+            for (const n of ns) {
+              const a = el("article");
+              a.append(
+                el("strong", n.title),
+                el(
+                  "p",
+                  [n.due, n.done ? "Erledigt" : "", n.recorded_at ? "Erfasst " + localDay(n.recorded_at) : ""]
+                    .filter(Boolean)
+                    .join(" · "),
+                  "meta",
+                ),
+                el("div", n.content, "copy"),
+              );
+              if (n.evidence) a.append(el("p", "Privater Quellbeleg erfasst", "meta"));
+              if (kind === "gespraech") {
+                const open = button("Nur diese Runde öffnen", () => {
+                  roundTitle = n.title;
+                  draw();
+                  $("title").focus();
+                });
+                open.className = "action";
+                a.append(open);
+              }
+              for (const src of n.sources || []) a.append(link(src, src));
+              root.append(a);
+            }
+          }
+        }
+        root.append(el("h2", "Verlauf"));
+        const events = [...(job.events || [])].sort((a, b) => b.occurred_on.localeCompare(a.occurred_on));
+        for (const e of events) {
+          const a = el("article");
+          a.append(
+            el("strong", e.occurred_on + " · " + (statuses[e.status] || e.status)),
+            el("p", e.note),
+            el("small", "Erfasst " + localDay(e.recorded_at)),
+          );
+          root.append(a);
+        }
+        if (!events.length) root.append(empty("Keine Ereignisse in diesem Arbeitsstand."));
+        const files = (job.documents || []).filter(
+          (f) =>
+            typeof f === "string" && /^job-[a-z0-9_-]+-anschreiben(?:-[a-zA-Z0-9_-]+)?\.(docx|pdf)$/.test(f),
+        );
+        if (files.length) {
+          root.append(el("h2", "Unterlagen"));
+          for (const f of files) {
+            const a = el("a", f);
+            a.href = "../dokumente/" + encodeURIComponent(f);
+            root.append(a);
+          }
+        }
+      }
+      function researchForm() {
+        const box = el("details"),
+          summary = el("summary", "Recherchequellen öffnen");
+        box.append(summary);
+        const role = el("input"),
+          region = el("input"),
+          toolbar = el("div", null, "toolbar"),
+          links = el("p");
+        for (const [name, input] of [
+          ["Zielrolle", role],
+          ["Suchregion", region],
+        ]) {
+          const label = el("label", name);
+          label.append(input);
+          toolbar.append(label);
+        }
+        function refresh() {
+          links.replaceChildren();
+          const base = "https://www.arbeitsagentur.de/jobsuche/suche?",
+            indeed = "https://de.indeed.com/jobs?";
+          links.append(
+            link("BA-Jobsuche", base + new URLSearchParams({ was: role.value, wo: region.value })),
+            link("Indeed Jobs", indeed + new URLSearchParams({ q: role.value, l: region.value })),
+            link("BA-Entgeltatlas", "https://web.arbeitsagentur.de/entgeltatlas/"),
+            link("Indeed Gehälter", "https://de.indeed.com/career/salaries"),
+          );
+        }
+        role.oninput = region.oninput = refresh;
+        refresh();
+        box.append(toolbar, links);
+        return box;
+      }
+      function draw() {
+        const root = $("content");
+        root.replaceChildren();
+        $("title").textContent = section;
+        for (const b of document.querySelectorAll("nav button")) {
+          if (b.textContent === section) b.setAttribute("aria-current", "page");
+          else b.removeAttribute("aria-current");
+        }
+        const listing = ["Stellen", "Bewerbungen", "Gespräche"].includes(section);
+        $("filters").hidden = !listing || !!selected;
+        if (selected) {
+          const job = jobs.find((j) => j.id === selected);
+          if (job) {
+            detail(job, root);
+            return;
+          }
+          selected = null;
+        }
+        if (section === "Auswertung") {
+          const grid = el("div", null, "metrics");
+          for (const [key, label] of Object.entries(statuses)) {
+            const card = el("div", label, "metric");
+            card.prepend(el("b", jobs.filter((j) => j.status === key).length));
+            grid.append(card);
+          }
+          root.append(grid);
+          return;
+        }
+        if (section === "Heute") {
+          const todo = jobs
+            .flatMap((j) =>
+              notes(j)
+                .filter((n) => n.kind === "aufgabe" && !n.done)
+                .map((n) => ({ j, n })),
+            )
+            .sort((a, b) => (a.n.due || "9999").localeCompare(b.n.due || "9999"));
+          root.append(el("h2", "Offene Aufgaben"));
+          for (const { j, n } of todo) root.append(row(j, [n.due, n.title].filter(Boolean).join(" · ")));
+          if (!todo.length) root.append(empty("Keine offenen Aufgaben erfasst."));
+          root.append(el("h2", "Gespräche und Angebote"));
+          const active = jobs.filter((j) => ["interview", "angebot"].includes(j.status));
+          for (const j of active)
+            root.append(
+              row(
+                j,
+                notes(j)
+                  .filter((n) => n.kind === "gespraech")
+                  .map((n) => n.title)
+                  .join(" · "),
+              ),
+            );
+          if (!active.length) root.append(empty("Keine Gespräche oder Angebote mit aktivem Status."));
+          root.append(el("h2", "Zuletzt erfasste Rückmeldungen"));
+          const recent = jobs
+            .flatMap((j) => (j.events || []).map((e) => ({ j, e })))
+            .sort((a, b) => b.e.recorded_at.localeCompare(a.e.recorded_at))
+            .slice(0, 10);
+          for (const { j, e } of recent)
+            root.append(row(j, e.occurred_on + " · " + (statuses[e.status] || e.status) + " · " + e.note));
+          if (!recent.length) root.append(empty("Keine Rückmeldungen erfasst."));
+          return;
+        }
+        if (section === "Stellen") root.append(researchForm());
+        const q = $("query").value.toLocaleLowerCase("de"),
+          day = $("date").value;
+        const list = jobs.filter(
+          (j) =>
+            (section !== "Bewerbungen" || j.status !== "recherche") &&
+            (section !== "Gespräche" ||
+              j.status === "interview" ||
+              notes(j).some((n) => n.kind === "gespraech") ||
+              (j.events || []).some((e) => e.status === "interview")) &&
+            (!$("status").value || j.status === $("status").value) &&
+            [j.company, j.role, j.reference, j.id].join(" ").toLocaleLowerCase("de").includes(q) &&
+            (!day ||
+              [
+                j.checked_at,
+                ...(j.events || []).map((e) => e.recorded_at),
+                ...(j.notes || []).map((n) => n.recorded_at),
+              ].some((t) => localDay(t) === day)),
+        );
+        list.sort((a, b) => {
+          const byName = a.company.localeCompare(b.company, "de") || a.role.localeCompare(b.role, "de");
+          if ($("sort").value === "recent") return latestDate(b).localeCompare(latestDate(a)) || byName;
+          if ($("sort").value === "company") return byName;
+          return (b.score_manual ?? -1) - (a.score_manual ?? -1) || byName;
+        });
+        root.append(el("small", list.length + " Treffer"));
+        for (const j of list) {
+          const ns = notes(j),
+            s = j.score_manual == null ? "Score offen" : "Score " + j.score_manual;
+          const summary =
+            section === "Gespräche"
+              ? ns
+                  .filter((n) => n.kind === "gespraech")
+                  .map((n) => [n.due, n.title].filter(Boolean).join(" · "))
+                  .join(", ")
+              : [
+                  s,
+                  ns.find((n) => n.kind === "arbeitgeberband")?.title || "Arbeitgeberband offen",
+                  j.score_reason,
+                ]
+                  .filter(Boolean)
+                  .join(" · ");
+          root.append(row(j, summary));
+        }
+        if (!list.length) root.append(empty("Keine passenden Einträge im geladenen Arbeitsstand."));
+      }
+      for (const v of sections) document.querySelector("nav").append(button(v, () => goto(v)));
+      $("status").add(new Option("Alle", ""));
+      for (const [k, v] of Object.entries(statuses)) $("status").add(new Option(v, k));
+      for (const key of ["query", "status", "date", "sort"]) $(key).oninput = draw;
+      $("print").onclick = () => window.print();
+      $("load").onchange = async (event) => {
+        try {
+          const data = JSON.parse(await event.target.files[0].text());
+          const rows = Array.isArray(data) ? data : data.export_only && data.jobs;
+          if (
+            !Array.isArray(rows) ||
+            !rows.every(
+              (j) =>
+                j &&
+                ["id", "company", "role", "status"].every((k) => typeof j[k] === "string") &&
+                (!j.events ||
+                  (Array.isArray(j.events) &&
+                    j.events.every(
+                      (e) => e && typeof e.occurred_on === "string" && typeof e.recorded_at === "string",
+                    ))) &&
+                (!j.notes ||
+                  (Array.isArray(j.notes) &&
+                    j.notes.every(
+                      (n) =>
+                        n &&
+                        typeof n.title === "string" &&
+                        typeof n.kind === "string" &&
+                        typeof n.content === "string" &&
+                        (!n.sources || Array.isArray(n.sources)),
+                    ))) &&
+                (!j.documents || Array.isArray(j.documents)),
+            )
+          )
+            throw Error();
+          jobs = rows;
+          selected = null;
+          draw();
+          $("notice").textContent = "";
+        } catch {
+          $("notice").textContent = "Bitte bewerbungen.json oder den geprüften Chat-Arbeitsstand laden.";
+        }
+      };
+      draw();
+    </script>
+  </body>
+</html>

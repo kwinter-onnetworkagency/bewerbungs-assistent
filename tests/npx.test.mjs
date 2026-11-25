@@ -6,7 +6,7 @@ import path from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 const launcher = fileURLToPath(new URL('../bin/start.mjs', import.meta.url))
-const commands = ['interview','stellensuche','anschreiben','rueckmeldung','bericht']
+const commands = ['interview','stellensuche','anschreiben','rueckmeldung','bericht','dashboard','gehalt','gespraech']
 function setup(dest, mode) {
   return spawnSync(process.execPath, [launcher, '--assistent', mode, '--ziel', dest, '--name', 'Testperson'], {encoding: 'utf8'})
 }
@@ -17,6 +17,7 @@ test('Vier Einstiege erzeugen nutzbare Kurzbefehle in einem neuen persönlichen 
     const dest = path.join(root, 'Privater Ordner ' + mode)
     const result = setup(dest, mode)
     assert.equal(result.status, 0, result.stderr)
+    assert.ok(fs.existsSync(path.join(dest,'exports/Dashboard.html')))
     const instructions = fs.readFileSync(path.join(dest,'integration/PROJEKTANWEISUNG.txt'),'utf8')
     for (const name of commands) {
       assert.ok(instructions.includes('/' + name + ' '))

@@ -7,7 +7,7 @@ import subprocess
 import sys
 
 from . import __version__
-from .core import Workspace, validate_profile, write, keyword_match, search_queries
+from .core import NOTE_TYPES, Workspace, validate_profile, write, keyword_match, search_queries
 from .documents import render
 from .export import report, chat_bundle
 from .setup import initialize, wizard, ASSISTANTS
@@ -58,6 +58,15 @@ def parser():
     status.add_argument("--datum", required=True)
     status.add_argument("--grund", required=True)
     status.add_argument("--message-id", default="")
+    note = commands.add_parser("notiz", help="Recherche, Gesprächsmappe oder Aufgabe zur Stelle sichern")
+    note.add_argument("id")
+    note.add_argument("--art", choices=NOTE_TYPES, required=True)
+    note.add_argument("--titel", required=True)
+    note.add_argument("--textdatei", required=True)
+    note.add_argument("--quelle", action="append", default=[])
+    note.add_argument("--beleg", help="Privaten Quellbeleg sichern")
+    note.add_argument("--datum", help="Frist oder Gesprächsdatum (JJJJ-MM-TT)")
+    note.add_argument("--erledigt", action="store_true")
     cv = commands.add_parser("lebenslauf", help="Einfachen DOCX-Lebenslauf aus belegten Fakten erstellen")
     cv.add_argument("--pdf", action="store_true")
     letter = commands.add_parser("anschreiben", help="Gespeicherten Entwurf als DOCX erstellen")
@@ -143,8 +152,13 @@ def main(argv=None):
             print(path)
             if a.pdf:
                 print(convert_pdf(path))
+        elif a.command == "notiz":
+            w.add_note(a.id, a.art, a.titel, Path(a.textdatei).read_text(encoding="utf-8-sig"),
+                       a.quelle, a.datum, a.erledigt, a.beleg)
+            print("Notiz gespeichert.")
         elif a.command == "bericht":
             print(report(w))
+            print(w.path("exports", "Dashboard.html"))
         elif a.command == "chat-export":
             print(chat_bundle(w))
             print("Enthält dein Profil. Lokal entpacken, Dateien prüfen und einzeln in dein privates Projekt hochladen.")

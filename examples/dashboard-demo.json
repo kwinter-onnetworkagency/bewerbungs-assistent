@@ -1,0 +1,86 @@
+{
+  "export_only": true,
+  "jobs": [
+    {
+      "id": "demo-1",
+      "company": "Beispielwerk eG",
+      "role": "Projektleitung",
+      "reference": "DEMO-1",
+      "url": "https://jobs.example.org/1",
+      "status": "interview",
+      "score_manual": 84,
+      "score_reason": "Fiktive Bewertung für die Vorschau.",
+      "checked_at": "2026-01-12T12:00:00Z",
+      "events": [
+        {
+          "status": "interview",
+          "occurred_on": "2026-01-15",
+          "recorded_at": "2026-01-16T09:00:00Z",
+          "note": "Fiktiver Beleg für diese Beispielansicht."
+        }
+      ],
+      "notes": [
+        {
+          "kind": "gespraech",
+          "title": "Fachrunde",
+          "content": "Kurzbriefing: Ablauf einer Projekteingabe erklären.\nPraxisfrage: Wie entscheidest du bei zwei konkurrierenden Anforderungen?\nEigene Rückfrage: Wer entscheidet über Prioritäten?",
+          "due": null,
+          "done": false,
+          "sources": [],
+          "recorded_at": "2026-01-16T10:00:00Z"
+        },
+        {
+          "kind": "marktvergleich",
+          "title": "Vergleichsbasis",
+          "content": "Fiktive Demo: Berufsgruppe und Region vor einem Zahlenvergleich prüfen.",
+          "due": null,
+          "done": false,
+          "sources": [],
+          "recorded_at": "2026-01-16T10:00:00Z"
+        },
+        {
+          "kind": "aufgabe",
+          "title": "Fragen für die Fachrunde auswählen",
+          "content": "Beispiele aus dem eigenen Profil prüfen.",
+          "due": null,
+          "done": false,
+          "sources": [],
+          "recorded_at": "2026-01-16T10:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "demo-2",
+      "company": "Musterbetrieb GmbH",
+      "role": "Produktkoordination",
+      "reference": "DEMO-2",
+      "url": "https://jobs.example.org/2",
+      "status": "recherche",
+      "score_manual": 76,
+      "score_reason": "Fiktive Bewertung für die Vorschau.",
+      "checked_at": "2026-01-12T12:00:00Z",
+      "events": [],
+      "notes": []
+    },
+    {
+      "id": "demo-3",
+      "company": "Beispielwerk eG",
+      "role": "Prozessmanagement",
+      "reference": "DEMO-3",
+      "url": "https://jobs.example.org/3",
+      "status": "absage",
+      "score_manual": 70,
+      "score_reason": "Fiktive Bewertung für die Vorschau.",
+      "checked_at": "2026-01-12T12:00:00Z",
+      "events": [
+        {
+          "status": "absage",
+          "occurred_on": "2026-01-15",
+          "recorded_at": "2026-01-16T09:00:00Z",
+          "note": "Fiktiver Beleg für diese Beispielansicht."
+        }
+      ],
+      "notes": []
+    }
+  ]
+}

@@ -44,6 +44,7 @@ function install(target, mode, name) {
     const profile = JSON.parse(fs.readFileSync(path.join(source, 'examples/profil-vorlage.json'), 'utf8'))
     profile.name = name.trim()
     put('profil.json', JSON.stringify(profile, null, 2) + '\n')
+    fs.copyFileSync(path.join(source,'resources/Dashboard.html'), path.join(dest,'exports/Dashboard.html'))
     put('bewerbungen.json', '[]\n')
     put('workspace.json', JSON.stringify({schema_version: 1, assistant: mode, created_at: new Date().toISOString()}, null, 2))
     put('.gitignore', '*\n')

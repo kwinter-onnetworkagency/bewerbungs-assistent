@@ -35,6 +35,7 @@ def initialize(destination, name, roles, location, assistant):
         (dest / ".gitignore").write_text("*\n", encoding="utf-8")
         write(dest / "profil.json", profile)
         write(dest / "bewerbungen.json", [])
+        shutil.copyfile(SOURCE / "resources" / "Dashboard.html", dest / "exports" / "Dashboard.html")
         instructions = (SOURCE / "resources" / "ASSISTENT.txt").read_text(encoding="utf-8")
         instructions += "\nArbeitsmodus: " + ASSISTANTS[assistant] + ".\n"
         (dest / "integration" / "PROJEKTANWEISUNG.txt").write_text(instructions, encoding="utf-8")

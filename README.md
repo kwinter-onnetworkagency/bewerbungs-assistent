@@ -11,7 +11,7 @@ Die Vorlagen funktionieren in einem privaten ChatGPT- oder Claude-Projekt. Für 
 **Mit lokalem Arbeitsordner:** Installiere bei Bedarf [Node.js ab Version 20 mit npm](https://nodejs.org/) und [Git](https://git-scm.com/downloads). Starte einmal im Terminal:
 
 ```sh
-npx github:kwinter-onnetworkagency/bewerbungs-assistent#v0.2.0
+npx github:kwinter-onnetworkagency/bewerbungs-assistent#v0.3.0
 ```
 
 Wähle deinen Assistenten, gib deinen Namen ein und wähle einen neuen privaten Ordner. Der Dialog zeigt dir, wie du dort weitermachst. Für Einrichtung und Gespräch genügt Node.js. Die optionalen lokalen Dokument- und Trackingwerkzeuge nutzen Python ab 3.11.
@@ -22,9 +22,18 @@ Wähle deinen Assistenten, gib deinen Namen ein und wähle einen neuen privaten 
 | Passende Stellen prüfen | `/stellensuche` | `$stellensuche` |
 | Anschreiben entwerfen | `/anschreiben` | `$anschreiben` |
 | Rückmeldung zuordnen | `/rueckmeldung` | `$rueckmeldung` |
+| Gehaltsband und Marktwerte recherchieren | `/gehalt` | `$gehalt` |
+| Vorstellungsgespräch vorbereiten und üben | `/gespraech` | `$gespraech` |
+| Persönliche Übersicht öffnen | `/dashboard` | `$dashboard` |
 | Bewerbungsstand ansehen | `/bericht` | `$bericht` |
 
 Beispiel für die zweite Nachricht nach dem Interview: „/stellensuche Prüfe die beiden beigefügten Anzeigen anhand meiner Muss-Kriterien.“ [Einrichtung je Assistent](docs/INSTALLATION.md)
+
+## Vom Stellenfund zum Vorstellungsgespräch
+
+Mit `/stellensuche` recherchierst du auch bei Indeed und der Bundesagentur für Arbeit. Mit `/gehalt` vergleichst du den Gehaltsrahmen der konkreten Stelle mit passenden Marktwerten. Nach einer Einladung erstellt `/gespraech` eine Mappe für deine Runde und übt das Gespräch mit dir.
+
+`/dashboard` öffnet die lokale Übersicht mit Aufgaben, Stellenvergleich, Bewerbungsverlauf, Gesprächsmappen und Auswertung. Im Browser kannst du die HTML-Datei aus dem Release öffnen und einen Arbeitsstand von deinem Gerät laden. [Beispiele, Quellen und Bedienung](docs/ARBEITSPLATZ.md)
 
 ## Was du damit machen kannst
 
