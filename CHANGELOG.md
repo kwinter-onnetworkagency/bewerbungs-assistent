@@ -1,5 +1,9 @@
 # Änderungen
 
+## 0.2.0 (25.11.2026)
+
+- Einrichtung per npx direkt von GitHub und fünf Kurzbefehle für das private Projekt.
+
 ## 0.1.0, 24.11.2026
 
 - Geführte Einrichtung für ChatGPT, Claude, Claude Code und Codex.

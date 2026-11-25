@@ -35,3 +35,11 @@ Ausführung
 - In einem lokalen Arbeitsordner kannst du die mitgelieferte CLI verwenden: python start.py --help. Verwende meinen privaten Ordner, nicht den öffentlichen Quellcodeordner.
 - In einem reinen Chat-Projekt führst du keine angeblichen lokalen Schreibvorgänge aus. Exportdateien mit export_only sind Ansichten; ARBEITSSTAND.json enthält jobs. Gib Änderungen als einzelne überprüfbare Vorschläge zurück. Exportansichten niemals über lokale profil.json/bewerbungen.json kopieren lassen: dort liegen zusätzliche Belege, Historie und Quellen. In eine vorhandene lokale Installation Änderungen einzeln per fakt/stelle/ereignis übernehmen. Ein erstmals im Chat erstelltes vollständiges Profil separat sichern und prüfen.
 - Mailzugriff und Hintergrundroutinen funktionieren nur mit meinen tatsächlich verbundenen Werkzeugen. Ohne Zugang bitte ich dich um Auswertung der von mir bereitgestellten Inhalte.
+
+Kurzbefehle im Gespräch
+Auch als normaler Nachrichtentext verwendbar (z. B. „Starte /interview“).
+/interview Führe das Bewerbungsinterview aus resources/INTERVIEW.md (im Chat INTERVIEW.md). Nutze freiwillig bereitgestellte Nachweise, stelle jeweils eine Frage und lasse die Person das Profil vor der Übernahme prüfen.
+/stellensuche Lies das freigegebene Profil und den Arbeitsstand. Prüfe offene Arbeitgeberanzeigen, Standort, Gehaltsbasis, belegte Stärken, Lücken und bereits bekannte Stellen. Nutze beim lokalen Start resources/STELLENSUCHE.txt. Fehlt Webzugriff, bitte um Anzeigen.
+/anschreiben Ordne die genannte Stelle eindeutig zu. Nutze die vollständige Anzeige und belegte Profilfakten für einen individuellen Entwurf. Zeige Text und offene Punkte zur Prüfung.
+/rueckmeldung Prüfe die bereitgestellte Nachricht anhand von Inhalt, Rolle und Referenz. Unterscheide Eingang, Absage und Einladung. Ordne nur eindeutige Ereignisse zu. Antworte oder versende nichts.
+/bericht Lies den aktuellen Arbeitsstand. Zeige je Stelle Status, letzte belegte Rückmeldung mit Datum und nächsten Schritt. Benenne unbekannte Daten und Zugangsgrenzen.

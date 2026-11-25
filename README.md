@@ -6,23 +6,25 @@ Die Vorlagen funktionieren in einem privaten ChatGPT- oder Claude-Projekt. Für 
 
 ## Schnell starten
 
-**Du möchtest im Chat arbeiten:** Folge [Installation: ChatGPT oder Claude](docs/INSTALLATION.md#chatgpt-oder-claude-im-browser). Lade das Interview in dein privates Projekt und beginne mit deinem vorhandenen Lebenslauf oder einem Gespräch. Dafür musst du Python nicht installieren.
+**Im Browser:** Erstelle ein privates ChatGPT- oder Claude-Projekt. Kopiere [die Projektanweisung](resources/ASSISTENT.txt) in die Anweisungen und lade [den Interviewleitfaden](resources/INTERVIEW.md) hoch. Schreibe als erste Nachricht `/interview`. Öffnet sich dabei ein Menü, sende „Starte /interview“ als normalen Text.
 
-**Du möchtest einen lokalen Arbeitsordner:** Lade [das Repository als ZIP](https://github.com/kwinter-onnetworkagency/bewerbungs-assistent/archive/refs/heads/main.zip) herunter und entpacke es. Installiere bei Bedarf [Python ab 3.11](https://www.python.org/downloads/). Öffne ein Terminal im entpackten Ordner und starte:
-
-```sh
-python3 start.py
-```
-
-Unter Windows: `py -3 start.py`. Alternativ stehen `Start.command` für macOS und `Start.bat` für Windows bereit. Falls dein System den Doppelklick blockiert, nutze den Terminalbefehl aus der [Installationsanleitung](docs/INSTALLATION.md).
-
-Der Assistent fragt nach Name, Zielrollen, Ort und gewünschtem Assistenten. Er legt einen neuen privaten Arbeitsordner an. Anschließend führst du dort das persönliche Interview durch:
+**Mit lokalem Arbeitsordner:** Installiere bei Bedarf [Node.js ab Version 20 mit npm](https://nodejs.org/) und [Git](https://git-scm.com/downloads). Starte einmal im Terminal:
 
 ```sh
-python3 start.py interview
+npx github:kwinter-onnetworkagency/bewerbungs-assistent#v0.2.0
 ```
 
-Das Interview ist mit `/pause` unterbrechbar. Offene Antworten bleiben offen. Das Profil wird erst nach deiner Bestätigung übernommen. Für ein Gespräch mit Rückfragen gibt es [die Interviewvorlage](resources/INTERVIEW.md); der lokale Fragebogen funktioniert auch ohne KI-Zugang.
+Wähle deinen Assistenten, gib deinen Namen ein und wähle einen neuen privaten Ordner. Der Dialog zeigt dir, wie du dort weitermachst. Für Einrichtung und Gespräch genügt Node.js. Die optionalen lokalen Dokument- und Trackingwerkzeuge nutzen Python ab 3.11.
+
+| Was möchtest du tun? | Claude Code oder Nachricht im Chat-Projekt | Codex-Skill |
+|---|---|---|
+| Persönliches Profil aufbauen | `/interview` | `$interview` |
+| Passende Stellen prüfen | `/stellensuche` | `$stellensuche` |
+| Anschreiben entwerfen | `/anschreiben` | `$anschreiben` |
+| Rückmeldung zuordnen | `/rueckmeldung` | `$rueckmeldung` |
+| Bewerbungsstand ansehen | `/bericht` | `$bericht` |
+
+Beispiel für die zweite Nachricht nach dem Interview: „/stellensuche Prüfe die beiden beigefügten Anzeigen anhand meiner Muss-Kriterien.“ [Einrichtung je Assistent](docs/INSTALLATION.md)
 
 ## Was du damit machen kannst
 

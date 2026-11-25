@@ -1,0 +1,10 @@
+{
+  "name": "bewerbungs-assistent",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Persönlichen Bewerbungsassistenten für Claude, ChatGPT und Codex einrichten",
+  "license": "MIT",
+  "bin": { "bewerbungs-assistent": "bin/start.mjs" },
+  "engines": { "node": ">=20" },
+  "files": ["bin/start.mjs", "resources", "docs", "examples", "bewerbung/*.py", "start.py", "LICENSE"]
+}

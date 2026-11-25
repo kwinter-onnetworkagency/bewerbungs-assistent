@@ -40,12 +40,14 @@ def initialize(destination, name, roles, location, assistant):
         (dest / "integration" / "PROJEKTANWEISUNG.txt").write_text(instructions, encoding="utf-8")
         if assistant in {"claude-code", "codex"}:
             (dest / ("CLAUDE.md" if assistant == "claude-code" else "AGENTS.md")).write_text(instructions, encoding="utf-8")
+            skill_dir = ".agents" if assistant == "codex" else ".claude"
+            shutil.copytree(dest / "resources" / "skills", dest / skill_dir / "skills")
         write(dest / "workspace.json", dict(schema_version=1, assistant=assistant, created_at=now()))
         (dest / "START_HIER.md").write_text(
             "# Dein persönlicher Bewerbungsordner\n\n"
             "Dieser Ordner enthält private Daten. Nicht auf GitHub hochladen.\n\n"
             "1. Öffne docs/INSTALLATION.md und den Abschnitt für deinen Assistenten.\n"
-            "2. Starte python start.py interview oder das geführte Gespräch aus resources/INTERVIEW.md.\n"
+            "2. Beginne im Assistenten mit /interview, in Codex mit $interview.\n"
             "3. Ergänze belegte Fakten aus Lebenslauf/Nachweisen und prüfe das erzeugte Profil selbst.\n"
             "4. Starte python start.py pruefen.\n"
             "5. Nutze resources/STARTPROMPTS.md für die erste Stellensuche.\n\n"

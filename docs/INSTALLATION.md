@@ -2,6 +2,18 @@
 
 Du kannst mit einem Chat-Projekt beginnen oder einen lokalen Arbeitsordner einrichten. Jede Person verwendet ihr eigenes Profil und eigene Konten.
 
+## Start mit npx
+
+Mit [Node.js ab 20 samt npm](https://nodejs.org/) und [Git](https://git-scm.com/downloads) starte im Terminal:
+
+```sh
+npx github:kwinter-onnetworkagency/bewerbungs-assistent#v0.2.0
+```
+
+Beim ersten Start kann npm um Bestätigung für den Download bitten. Der Assistent fragt nach Arbeitsumgebung, Profilname und einem neuen privaten Zielordner. Öffne diesen Ordner in Claude Code und gib `/interview` ein. In Codex starte mit `$interview`. Für ChatGPT und Claude im Browser zeigt dir der Dialog die beiden benötigten Dateien. Bereits eingerichtete Ordner bleiben erhalten.
+
+Die fünf Aktionen heißen `interview`, `stellensuche`, `anschreiben`, `rueckmeldung` und `bericht`. Claude Code lädt sie aus den lokalen Projektskills, Codex aus `.agents/skills`. Im Browser deutet die Projektanweisung die eingegebene Nachricht. Falls die Oberfläche den Schrägstrich abfängt, schreibe beispielsweise „Starte /interview“.
+
 ## ChatGPT oder Claude im Browser
 
 Dieser Weg braucht keine lokale Installation und keinen API-Schlüssel.
@@ -9,7 +21,7 @@ Dieser Weg braucht keine lokale Installation und keinen API-Schlüssel.
 1. Lade das Repository als ZIP herunter und entpacke es. Öffne den Ordner `resources`.
 2. Erstelle in deinem eigenen ChatGPT- oder Claude-Konto ein **privates** Projekt, etwa „Meine Bewerbungen“. Teile dieses Projekt nicht mit der Lerngruppe: Hier liegen später deine eigenen Unterlagen.
 3. Übernimm den Text aus `ASSISTENT.txt` in die Projektanweisungen. Lade `INTERVIEW.md` als Projektdatei hoch. Wenn dein Konto keine Projekte anbietet, kannst du beide Texte am Anfang eines privaten Chats bereitstellen; prüfe dann den Kontext bei jedem neuen Chat erneut.
-4. Schreibe: „Führe mit mir das persönliche Bewerbungsinterview durch. Stelle jeweils eine Frage. Nutze meinen Lebenslauf als Grundlage, soweit ich ihn bereitstelle. Zeige mir am Ende Profil und Arbeitsregeln zur Prüfung.“
+4. Schreibe `/interview`. Der Assistent stellt jeweils eine Frage und legt dir dein Profil zur Prüfung vor.
 5. Lade nur Unterlagen hoch, die der Dienst verarbeiten soll. Zugangsdaten und vertrauliche Unterlagen Dritter gehören nicht dazu.
 6. Prüfe das erzeugte `profil.json`, insbesondere Abschlüsse, Zeiträume, Fähigkeiten, Gehaltsbasis und Mobilität. Speichere eine lokale Kopie. Lass den Assistenten Unbekanntes als offene Frage führen.
 7. Verwende anschließend die Aufgaben aus `STARTPROMPTS.md`. Ein reines Chat-Projekt kann seinen eigenen Gesprächsstand als Datei zurückgeben. Wenn du bereits eine lokale Installation hast, übernimm nur einzelne geprüfte Änderungen über deren Befehle. Die absichtlich gekürzten Exportansichten dürfen lokale Originaldateien nicht ersetzen. Ein Chat hat keinen automatischen Schreibzugriff auf deinen lokalen Ordner.
@@ -18,7 +30,7 @@ Wenn du die lokale Einrichtung benutzt hast, erzeugt `python start.py chat-expor
 
 Datei-, Projekt- und Werkzeugverfügbarkeit hängen von deinem Tarif und den Einstellungen deines Kontos ab. Der Installer prüft deinen Tarif nicht und meldet keine erfolgreiche Verbindung zu einem Dienst.
 
-## Lokaler Einrichtungsassistent
+## Alternative mit Python und ZIP
 
 ### Voraussetzungen
 
@@ -64,7 +76,7 @@ python3 start.py interview
 python3 start.py pruefen
 ```
 
-Unter Windows jeweils `py -3` anstelle von `python3`. Das Interview fragt unter anderem Ausbildung, Erfahrung, Zielrollen, Gehaltsbasis, Mobilität, Unterlagen und Mailregeln ab. Mit `/pause` fortsetzen, mit leerer Antwort einen Punkt offen lassen. Nach der Zusammenfassung entscheidest du, ob die Angaben übernommen werden. Mit `resources/INTERVIEW.md` kann dein KI-Assistent dynamisch nachfragen und bereitgestellte Nachweise einbeziehen.
+Unter Windows jeweils `py -3` anstelle von `python3`. Das Interview fragt unter anderem Ausbildung, Erfahrung, Zielrollen, Gehaltsbasis, Mobilität, Unterlagen und Mailregeln ab. Mit `/pause` unterbrechen und mit demselben Befehl später fortsetzen, mit leerer Antwort einen Punkt offen lassen. Nach der Zusammenfassung entscheidest du, ob die Angaben übernommen werden. Mit `resources/INTERVIEW.md` kann dein KI-Assistent dynamisch nachfragen und bereitgestellte Nachweise einbeziehen.
 
 ## Claude Code
 
@@ -93,3 +105,8 @@ Quellenstand 24.11.2026. Bedienoberflächen und Tarife können sich ändern:
 - [Claude: What are projects?](https://support.claude.com/en/articles/9517075-what-are-projects)
 - [Claude Code: Projektanweisungen und Memory](https://code.claude.com/docs/en/memory)
 - [Codex: AGENTS.md](https://developers.openai.com/codex/guides/agents-md)
+
+- [Claude Code: Skills aufrufen](https://code.claude.com/docs/en/skills)
+- [Codex: Skills nutzen](https://developers.openai.com/codex/skills/)
+
+Bei einem Update von v0.1.0 kopiere zusätzlich `resources/ASSISTENT.txt` in deine Projektanweisungen (eigene Regeln beibehalten). Für native Aufrufe kopiere die fünf Unterordner aus `resources/skills/` nach `.claude/skills/` (Claude Code) bzw. `.agents/skills/` (Codex). Gleichnamige eigene Skills vorher vergleichen. Öffne den persönlichen Ordner erneut.

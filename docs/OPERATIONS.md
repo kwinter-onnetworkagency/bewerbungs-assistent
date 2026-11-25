@@ -1,6 +1,6 @@
 # Betrieb
 
-Kein Deploy und kein Serverbetrieb. Das Werkzeug läuft lokal mit Python ab 3.11. Es öffnet keinen Netzwerkport und richtet keine geplanten Aufgaben ein. Beenden mit Strg+C; ein unterbrochenes Interview lässt sich fortsetzen.
+Kein Deploy und kein Serverbetrieb. Der npx-Dialog läuft mit Node.js ab 20, die lokalen Dokument- und Trackingbefehle mit Python ab 3.11. Es öffnet keinen Netzwerkport und richtet keine geplanten Aufgaben ein. Beenden mit Strg+C; ein unterbrochenes Interview lässt sich fortsetzen.
 
 Öffentlicher Quellcode und persönlicher Arbeitsordner sind getrennt. Der Installer legt einen neuen externen Ordner an. Dateimodi schränken auf unterstützenden Systemen den Zugriff ein; sie ersetzen keine Festplattenverschlüsselung, Backups oder Betriebssystemberechtigungen.
 
