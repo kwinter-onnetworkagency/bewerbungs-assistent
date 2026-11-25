@@ -9,7 +9,7 @@ SOURCE = Path(__file__).resolve().parent.parent
 ASSISTANTS = {"chatgpt": "ChatGPT-Projekt", "claude": "Claude-Projekt", "claude-code": "Claude Code", "codex": "Codex"}
 
 
-def initialize(destination, name, roles, location, assistant, portfolio=False):
+def initialize(destination, name, roles, location, assistant, portfolio=None):
     dest = Path(destination).expanduser().absolute()
     if assistant not in ASSISTANTS:
         raise ValueError("Unbekannter Assistent.")
@@ -45,7 +45,8 @@ def initialize(destination, name, roles, location, assistant, portfolio=False):
             template = (SOURCE / "resources" / "Portfolio.html").read_text(encoding="utf-8")
             (folder / "index.html").write_text(template.replace("__NAME__", escape(profile["name"], quote=False)), encoding="utf-8")
             portfolio_guide = "\n" + (SOURCE / "resources" / "PORTFOLIO.txt").read_text(encoding="utf-8")
-        instructions += "\nPortfolio-Auswahl im Wizard: " + ("Ja" if portfolio else "Nein") + ". Im Interview berücksichtigen.\n"
+        if portfolio is not None:
+            instructions += "\nPortfolio-Auswahl im Wizard: " + ("Ja" if portfolio else "Nein") + ". Im Interview berücksichtigen.\n"
         instructions += "\nArbeitsmodus: " + ASSISTANTS[assistant] + ".\n"
         (dest / "integration" / "PROJEKTANWEISUNG.txt").write_text(instructions, encoding="utf-8")
         if assistant in {"claude-code", "codex"}:
@@ -73,7 +74,7 @@ def initialize(destination, name, roles, location, assistant, portfolio=False):
     return dest.resolve()
 
 
-def wizard(input_fn=input, output=print):
+def wizard(input_fn=input, output=print, portfolio=None):
     output("Bewerbungs-Assistent: persönliche Einrichtung")
     output("Benötigt Python ab 3.11. Kein API-Schlüssel, kein Versand, keine Anmeldung durch dieses Programm.")
     name = input_fn("Wie möchtest du im Profil heißen? ").strip()
@@ -86,14 +87,18 @@ def wizard(input_fn=input, output=print):
     assistant = list(ASSISTANTS)[int(choice)-1]
     default = str(Path.home() / "Bewerbungen" / "Mein-Bewerbungsprojekt")
     destination = input_fn(f"Neuer privater Ordner [{default}]: ").strip() or default
-    output(f"Anlegen: {destination}\nProfil: {name}\nAssistent: {ASSISTANTS[assistant]}")
+    if portfolio is None:
+        yes, no = {"j", "ja", "y", "yes"}, {"", "n", "nein", "no"}
+        while True:
+            answer = input_fn("Möchtest du auch ein persönliches Portfolio erstellen? [j/N]: ").strip().lower()
+            if answer in yes | no:
+                portfolio = answer in yes
+                break
+            output("Bitte antworte mit ja oder nein.")
+    output(f"Anlegen: {destination}\nProfil: {name}\nAssistent: {ASSISTANTS[assistant]}\nPortfolio: {'Ja' if portfolio else 'Nein'}")
     if input_fn("Jetzt lokal anlegen? [j/N]: ").strip().lower() not in {"j", "ja", "y", "yes"}:
         output("Abgebrochen. Keine Dateien angelegt.")
         return None
-    answer = input_fn("Möchtest du auch ein persönliches Portfolio erstellen? [j/N]: ").strip().lower()
-    if answer not in {"", "n", "nein", "no", "j", "ja", "y", "yes"}:
-        raise ValueError("Bitte antworte mit ja oder nein.")
-    portfolio = answer in {"j", "ja", "y", "yes"}
     path = initialize(destination, name, roles, location, assistant, portfolio)
     if portfolio:
         output((path / "resources" / "PORTFOLIO.txt").read_text(encoding="utf-8"))

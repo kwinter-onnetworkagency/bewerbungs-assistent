@@ -99,9 +99,21 @@ class WorkflowTest(unittest.TestCase):
 
     def test_wizard_cancel_has_no_writes(self):
         dest = self.base / "cancelled"
-        answers = iter(["Alex", "Analyst", "", "1", str(dest), "n"])
+        answers = iter(["Alex", "Analyst", "", "1", str(dest), "", "n"])
         self.assertIsNone(wizard(lambda _: next(answers), lambda _: None))
         self.assertFalse(dest.exists())
+
+    def test_python_cli_portfolio_decisions_and_escaped_page(self):
+        for answer in (None, "nein", "ja"):
+            dest = self.base / str(answer)
+            options = ["einrichten", "--ziel", str(dest), "--name", "A & <B>", "--assistent", "codex"]
+            with contextlib.redirect_stdout(io.StringIO()):
+                main(options + (["--portfolio", answer] if answer else []))
+            self.assertEqual(read(dest / "workspace.json")["portfolio"], None if not answer else answer == "ja")
+            self.assertEqual("Portfolio-Auswahl" in (dest / "AGENTS.md").read_text(encoding="utf-8"), bool(answer))
+            self.assertEqual((dest / "portfolio").exists(), answer == "ja")
+            if answer == "ja":
+                self.assertIn("A &amp; &lt;B&gt;", (dest / "portfolio/public/index.html").read_text(encoding="utf-8"))
 
     def test_wizard_runs_personal_interview_after_install(self):
         dest = self.base / "Direkt eingerichtetes Projekt"

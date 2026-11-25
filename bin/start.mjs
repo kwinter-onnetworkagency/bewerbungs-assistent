@@ -35,9 +35,9 @@ function install(target, mode, name, portfolio) {
     for (const entry of ['bewerbung', 'start.py', 'docs', 'resources', 'LICENSE'])
       fs.cpSync(path.join(source, entry), path.join(dest, entry), {recursive: true, filter: p => path.basename(p) !== '__pycache__'})
     const put = (file, value) => fs.writeFileSync(path.join(dest, file), value, {mode: 0o600})
-    const choice = portfolio ? 'Ja' : 'Nein'
+    const choice = portfolio === null ? '' : '\nPortfolio-Auswahl im Wizard: ' + (portfolio ? 'Ja' : 'Nein') + '. Im Interview berücksichtigen.\n'
     const instructions = fs.readFileSync(path.join(source, 'resources/ASSISTENT.txt'), 'utf8')
-      + '\nPortfolio-Auswahl im Wizard: ' + choice + '. Im Interview berücksichtigen.\n'
+      + choice
     let portfolioGuide = ''
     if (portfolio) {
       const folder = path.join(dest, 'portfolio/public')
@@ -89,11 +89,17 @@ async function main() {
     const dest = values.ziel ?? ((await ask('Neuer privater Ordner [' + defaultTarget + ']: ')) || defaultTarget)
     if (!dest.trim()) throw Error('Bitte einen neuen Zielordner angeben.')
     const guided = [values.name, values.ziel, values.assistent].some(value => value === undefined)
-    const answer = (values.portfolio ?? (guided && process.stdin.isTTY
-      ? await ask('Möchtest du auch ein persönliches Portfolio erstellen? [j/N]: ') : '')).toLowerCase()
-    if (!['', 'n', 'nein', 'no', 'j', 'ja', 'y', 'yes'].includes(answer))
+    const yes = ['j', 'ja', 'y', 'yes']
+    const no = ['', 'n', 'nein', 'no']
+    let answer = values.portfolio?.trim().toLowerCase()
+    if (answer === undefined && guided && process.stdin.isTTY) {
+      do {
+        answer = (await ask('Möchtest du auch ein persönliches Portfolio erstellen? [j/N]: ')).toLowerCase()
+      } while (!yes.includes(answer) && !no.includes(answer))
+    }
+    if (answer !== undefined && !yes.includes(answer) && !no.includes(answer))
       throw Error('Bitte antworte mit ja oder nein.')
-    install(dest, mode, name, ['j', 'ja', 'y', 'yes'].includes(answer))
+    install(dest, mode, name, answer === undefined ? null : yes.includes(answer))
   } finally { rl.close() }
 }
 main().catch(error => { console.error(error.code === 'EEXIST' ? 'Ziel existiert bereits. Bitte einen neuen Ordner wählen.' : error.message); process.exitCode = 1 })

@@ -12,7 +12,7 @@ npx github:kwinter-onnetworkagency/bewerbungs-assistent#v0.4.0
 
 Der Wizard fragt einmal, ob du ein persönliches Portfolio erstellen möchtest. Bei Ja erhältst du eine lokale Startseite und eine Anleitung für Cloudflare Pages Free, API-Token, Domainkauf und Nameserver. [Portfolio einrichten](PORTFOLIO.md)
 
-Bei einer unbeaufsichtigten Einrichtung mit allen Optionen ergänzt `--portfolio ja` die Startseite. Ohne Angabe gilt dort Nein.
+Bei einer unbeaufsichtigten Einrichtung mit allen Optionen ergänzt `--portfolio ja` die Startseite. Ohne Angabe bleibt die Entscheidung für das Gespräch im Assistenten offen.
 
 Beim ersten Start kann npm um Bestätigung für den Download bitten. Der Assistent fragt nach Arbeitsumgebung, Profilname und einem neuen privaten Zielordner. Öffne diesen Ordner in Claude Code und gib `/interview` ein. In Codex starte mit `$interview`. Für ChatGPT und Claude im Browser zeigt dir der Dialog die beiden benötigten Dateien. Bereits eingerichtete Ordner bleiben erhalten.
 

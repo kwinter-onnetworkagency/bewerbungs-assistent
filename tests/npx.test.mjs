@@ -18,6 +18,8 @@ test('Vier Einstiege erzeugen nutzbare Kurzbefehle in einem neuen persönlichen 
     const result = setup(dest, mode)
     assert.equal(result.status, 0, result.stderr)
     assert.ok(fs.existsSync(path.join(dest,'exports/Dashboard.html')))
+    assert.equal(JSON.parse(fs.readFileSync(path.join(dest,'workspace.json'))).portfolio, null)
+    assert.ok(!fs.existsSync(path.join(dest,'portfolio')))
     const instructions = fs.readFileSync(path.join(dest,'integration/PROJEKTANWEISUNG.txt'),'utf8')
     for (const name of commands) {
       assert.ok(instructions.includes('/' + name + ' '))

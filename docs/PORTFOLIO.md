@@ -4,7 +4,7 @@ Der Wizard fragt einmal: **Möchtest du auch ein persönliches Portfolio erstell
 
 ## 1. Seite vorbereiten
 
-Öffne `portfolio/public/index.html` per Doppelklick. Sag deinem Assistenten zum Beispiel: „Ergänze mein Kurzprofil und die beiden Arbeitsproben, die ich für die Veröffentlichung ausgewählt habe.“ Prüfe Namen, Bilder, verlinkte Dokumente und die Seite im Browser. In einem reinen Chat-Projekt lässt du dir die fertige `index.html` als Datei geben und speicherst sie in einem eigenen Ordner `portfolio/public`.
+Öffne `portfolio/public/index.html` per Doppelklick. Sag deinem Assistenten zum Beispiel: „Ergänze mein Kurzprofil und die beiden Arbeitsproben, die ich für die Veröffentlichung ausgewählt habe.“ Prüfe Namen, Bilder, verlinkte Dokumente und die Seite im Browser. In einem reinen Chat-Projekt lässt du dir die fertige `index.html` als Datei geben und speicherst sie als `portfolio/public/index.html`. Falls der lokale Wizard die Startseite bereits angelegt hat, öffne die heruntergeladene Version zur Prüfung und ersetze danach die Startseite.
 
 **Alles im Upload-Ordner wird öffentlich abrufbar**, auch unverlinkte Dateien. Lege dort nur die freigegebene Seite und ihre öffentlichen Bilder oder Dokumente ab. Bewerbungsdashboard, Nachweise, Postfachdaten und Zugangsdaten gehören in den privaten Arbeitsordner.
 
@@ -12,12 +12,12 @@ Der Wizard fragt einmal: **Möchtest du auch ein persönliches Portfolio erstell
 
 1. Erstelle bei Cloudflare ein Konto mit deiner E-Mail-Adresse und bestätige die Bestätigungsmail. Für ein statisches Portfolio reicht der kostenlose Tarif **Free**. [Konto erstellen](https://dash.cloudflare.com/sign-up) · [Pages Free und Tarifgrenzen](https://developers.cloudflare.com/pages/platform/limits/)
 2. Öffne im Dashboard **Workers & Pages → Create application**. Wähle **Pages** und den **Direct Upload** per Drag-and-drop. Gib deinem Projekt einen Namen.
-3. Ziehe ausschließlich den Ordner `portfolio/public` in das Upload-Feld. Die `index.html` muss direkt auf der obersten Ebene liegen. Prüfe die Dateiliste und klicke selbst auf **Deploy**.
+3. Ziehe ausschließlich den Ordner `portfolio/public` in das Upload-Feld. Die `index.html` muss direkt auf der obersten Ebene liegen. Prüfe die Dateiliste einschließlich versteckter Dateien und klicke selbst auf **Deploy**.
 4. Öffne die von Pages angezeigte HTTPS-Adresse in einem privaten Browserfenster. Prüfe Startseite, Bilder, Downloads und Links. Diese Adresse kannst du bereits in deine Bewerbungen aufnehmen. [Cloudflare Direct Upload](https://developers.cloudflare.com/pages/get-started/direct-upload/)
 
 ## 3. API-Token für spätere Uploads
 
-Beim Upload im Browser genügt die Anmeldung. Möchtest du später mit dem Cloudflare-Werkzeug **Wrangler** veröffentlichen, erstelle einen eingeschränkten **API-Token**. Cloudflare unterscheidet ihn vom kontoweit nutzbaren „Global API Key“.
+Beim Upload im Browser genügt die Anmeldung. Auch Wrangler kann sich am eigenen Rechner mit `npx wrangler login` über den Browser anmelden. Verwende für Wrangler eine aktuell unterstützte Node.js-Version. [Wrangler installieren](https://developers.cloudflare.com/workers/wrangler/install-and-update/) Möchtest du später mit dem Cloudflare-Werkzeug **Wrangler** veröffentlichen, erstelle einen eingeschränkten **API-Token**. Cloudflare unterscheidet ihn vom kontoweit nutzbaren „Global API Key“.
 
 1. Öffne **API Tokens → Create Token → Custom Token**. Gib dem Token einen verständlichen Namen, etwa „Portfolio Pages“.
 2. Wähle unter **Permissions** die Berechtigung **Account → Cloudflare Pages → Edit**. Begrenze den Token auf dein Cloudflare-Konto. Für den Datei-Upload genügen die Pages-Rechte. Domainregistrierung und DNS richtest du im Dashboard ein.
