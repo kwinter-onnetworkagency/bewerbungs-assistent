@@ -49,3 +49,23 @@ test('Tilde im Ziel bezeichnet den persönlichen Benutzerordner', t => {
   assert.ok(fs.existsSync(path.join(root,'Meine Bewerbung','profil.json')))
   assert.ok(!fs.existsSync(path.join(root,'~')))
 })
+
+test('Portfolio nur auf Wunsch, mit lokalem Uploadordner und Cloudflare-Anleitung', t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'portfolio-'))
+  t.after(() => fs.rmSync(root, {recursive:true, force:true}))
+  for (const answer of ['ja', 'nein']) {
+    const dest = path.join(root, answer)
+    const run = spawnSync(process.execPath, [launcher, '--assistent', 'codex', '--name', 'A & B <Test> $&',
+      '--ziel', dest, '--portfolio', answer], {encoding:'utf8'})
+    assert.equal(run.status, 0, run.stderr)
+    const optedIn = answer === 'ja'
+    assert.equal(JSON.parse(fs.readFileSync(path.join(dest,'workspace.json'))).portfolio, optedIn)
+    assert.equal(fs.existsSync(path.join(dest,'portfolio')), optedIn)
+    assert.equal(run.stdout.includes('Nameserver'), optedIn)
+    if (optedIn) {
+      const folder = path.join(dest,'portfolio/public')
+      assert.deepEqual(fs.readdirSync(folder), ['index.html'])
+      assert.match(fs.readFileSync(path.join(folder,'index.html'),'utf8'), /A &amp; B &lt;Test&gt; \$&amp;/)
+    }
+  }
+})

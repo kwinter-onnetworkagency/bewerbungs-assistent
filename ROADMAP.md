@@ -15,6 +15,8 @@
 
 ## Erledigt
 
+- 25.11.2026: Optionaler Portfolio-Einstieg mit lokaler Startseite und Cloudflare-Pages-Anleitung.
+
 - 25.11.2026: Arbeitsübersichten, Gehaltsvergleich, Quellenrecherche und Gesprächsvorbereitung je Stelle.
 
 - 25.11.2026: npx-Einrichtung und fünf Gesprächsaktionen ergänzt.

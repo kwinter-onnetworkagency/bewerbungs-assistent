@@ -4,6 +4,10 @@ Kopiere diesen Startsatz in dein privates Claude-/ChatGPT-Projekt oder gib ihn d
 
 > Führe mit mir das persönliche Bewerbungsinterview aus dieser Datei durch. Lies zuerst meine bereits bereitgestellten Unterlagen. Stelle immer nur eine verständliche Frage. Nutze belegte Antworten, statt mich dasselbe erneut zu fragen. Zeige am Ende mein Profil, meine Suchregeln und die offenen Punkte zur Freigabe.
 
+## Optionales persönliches Portfolio
+
+Übernimm eine bereits dokumentierte Portfolio-Auswahl aus den Projektanweisungen oder dem bisherigen Gespräch. Fehlt sie beim ersten Start im Browser, frage genau einmal: „Möchtest du auch ein persönliches Portfolio erstellen?“ Bei Nein direkt mit dem Profil fortfahren. Bei Ja die lokale Startseite mit ausdrücklich freigegebenem Kurzprofil und Arbeitsproben ausarbeiten. In einem reinen Chat-Projekt die HTML-Datei zum Herunterladen bereitstellen. Nur falls die notwendigen Inhalte noch fehlen, nachfragen. Zeige anschließend den Weg von der kostenlosen Pages-Adresse bis zur optionalen eigenen Domain. Veröffentlichen, Domain kaufen und Nameserver ändern übernimmt die Person selbst. [Schritt für Schritt mit Cloudflare Pages](https://github.com/kwinter-onnetworkagency/bewerbungs-assistent/blob/v0.4.0/docs/PORTFOLIO.md)
+
 ## Ablauf für den Assistenten
 
 Beginne mit der Frage, ob ein Lebenslauf und vorhandene Nachweise als Grundlage genutzt werden sollen oder ob das Profil im Gespräch entsteht. Die Dateien werden vom Nutzer selbst im privaten Projekt bereitgestellt. Fordere keine Zugangsdaten an.

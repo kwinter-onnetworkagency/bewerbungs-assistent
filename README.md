@@ -11,8 +11,10 @@ Die Vorlagen funktionieren in einem privaten ChatGPT- oder Claude-Projekt. Für 
 **Mit lokalem Arbeitsordner:** Installiere bei Bedarf [Node.js ab Version 20 mit npm](https://nodejs.org/) und [Git](https://git-scm.com/downloads). Starte einmal im Terminal:
 
 ```sh
-npx github:kwinter-onnetworkagency/bewerbungs-assistent#v0.3.0
+npx github:kwinter-onnetworkagency/bewerbungs-assistent#v0.4.0
 ```
+
+Der Wizard fragt einmal, ob du ein persönliches Portfolio erstellen möchtest. Bei Ja erhältst du eine lokale Startseite und eine Anleitung für Cloudflare Pages Free, API-Token, Domainkauf und Nameserver. [Portfolio einrichten](docs/PORTFOLIO.md)
 
 Wähle deinen Assistenten, gib deinen Namen ein und wähle einen neuen privaten Ordner. Der Dialog zeigt dir, wie du dort weitermachst. Für Einrichtung und Gespräch genügt Node.js. Die optionalen lokalen Dokument- und Trackingwerkzeuge nutzen Python ab 3.11.
 

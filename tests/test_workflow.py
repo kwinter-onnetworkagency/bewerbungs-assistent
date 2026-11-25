@@ -106,12 +106,15 @@ class WorkflowTest(unittest.TestCase):
     def test_wizard_runs_personal_interview_after_install(self):
         dest = self.base / "Direkt eingerichtetes Projekt"
         values = {"location": "Teststadt", "work_model": "Zwei Bürotage", "education": "Berufsausbildung 2021"}
-        answers = iter(["Alex", "Projektmanager", "Remote", "3", str(dest), "j", "j"] +
+        answers = iter(["Alex", "Projektmanager", "Remote", "3", str(dest), "j", "j", "j"] +
                        [values.get(k, "") for k, _, _ in QUESTIONS] + ["j"])
         self.assertEqual(wizard(lambda _: next(answers), lambda _: None), dest.resolve())
         self.assertEqual(read(dest / "profil.json")["preferences"]["work_model"], "Zwei Bürotage")
         self.assertEqual(read(dest / "interview.json")["status"], "vom_nutzer_geprueft_uebernommen")
         self.assertTrue((dest / "CLAUDE.md").exists())
+        self.assertTrue(read(dest / "workspace.json")["portfolio"])
+        self.assertEqual([f.name for f in (dest / "portfolio/public").iterdir()], ["index.html"])
+        self.assertIn("Nameserver", (dest / "START_HIER.md").read_text(encoding="utf-8"))
 
     def test_concurrent_interview_edit_is_not_overwritten(self):
         counter = 0

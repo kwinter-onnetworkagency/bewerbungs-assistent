@@ -22,6 +22,7 @@ def parser():
     commands = p.add_subparsers(dest="command")
     init = commands.add_parser("einrichten", help="Geführte Einrichtung, ohne Optionen interaktiv")
     init.add_argument("--ziel")
+    init.add_argument("--portfolio", action="store_true", help="Lokale Portfolio-Startseite und Cloudflare-Wegweiser anlegen")
     init.add_argument("--name")
     init.add_argument("--rolle", action="append", default=[])
     init.add_argument("--ort", default="")
@@ -115,7 +116,7 @@ def main(argv=None):
         if a.command == "einrichten":
             if not a.name:
                 raise ValueError("--name ist bei --ziel erforderlich.")
-            print(initialize(a.ziel, a.name, a.rolle, a.ort, a.assistent))
+            print(initialize(a.ziel, a.name, a.rolle, a.ort, a.assistent, a.portfolio))
             return
         w = Workspace(a.ordner)
         if a.command == "interview":

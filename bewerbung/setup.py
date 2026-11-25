@@ -1,4 +1,5 @@
 """Geführte Einrichtung in einem neuen privaten Ordner."""
+from html import escape
 from pathlib import Path
 import shutil
 
@@ -8,7 +9,7 @@ SOURCE = Path(__file__).resolve().parent.parent
 ASSISTANTS = {"chatgpt": "ChatGPT-Projekt", "claude": "Claude-Projekt", "claude-code": "Claude Code", "codex": "Codex"}
 
 
-def initialize(destination, name, roles, location, assistant):
+def initialize(destination, name, roles, location, assistant, portfolio=False):
     dest = Path(destination).expanduser().absolute()
     if assistant not in ASSISTANTS:
         raise ValueError("Unbekannter Assistent.")
@@ -37,13 +38,21 @@ def initialize(destination, name, roles, location, assistant):
         write(dest / "bewerbungen.json", [])
         shutil.copyfile(SOURCE / "resources" / "Dashboard.html", dest / "exports" / "Dashboard.html")
         instructions = (SOURCE / "resources" / "ASSISTENT.txt").read_text(encoding="utf-8")
+        portfolio_guide = ""
+        if portfolio:
+            folder = dest / "portfolio" / "public"
+            folder.mkdir(parents=True)
+            template = (SOURCE / "resources" / "Portfolio.html").read_text(encoding="utf-8")
+            (folder / "index.html").write_text(template.replace("__NAME__", escape(profile["name"], quote=False)), encoding="utf-8")
+            portfolio_guide = "\n" + (SOURCE / "resources" / "PORTFOLIO.txt").read_text(encoding="utf-8")
+        instructions += "\nPortfolio-Auswahl im Wizard: " + ("Ja" if portfolio else "Nein") + ". Im Interview berücksichtigen.\n"
         instructions += "\nArbeitsmodus: " + ASSISTANTS[assistant] + ".\n"
         (dest / "integration" / "PROJEKTANWEISUNG.txt").write_text(instructions, encoding="utf-8")
         if assistant in {"claude-code", "codex"}:
             (dest / ("CLAUDE.md" if assistant == "claude-code" else "AGENTS.md")).write_text(instructions, encoding="utf-8")
             skill_dir = ".agents" if assistant == "codex" else ".claude"
             shutil.copytree(dest / "resources" / "skills", dest / skill_dir / "skills")
-        write(dest / "workspace.json", dict(schema_version=1, assistant=assistant, created_at=now()))
+        write(dest / "workspace.json", dict(schema_version=1, assistant=assistant, portfolio=portfolio, created_at=now()))
         (dest / "START_HIER.md").write_text(
             "# Dein persönlicher Bewerbungsordner\n\n"
             "Dieser Ordner enthält private Daten. Nicht auf GitHub hochladen.\n\n"
@@ -56,7 +65,7 @@ def initialize(destination, name, roles, location, assistant):
             "python start.py chat-export ausführen, ZIP lokal entpacken und die vier Exportdateien "
             "nach eigener Prüfung einzeln hochladen. Lokale Originaldateien profil.json und "
             "bewerbungen.json nicht hochladen oder durch Exporte ersetzen. "
-            "Ein ZIP allein richtet dort kein Projekt ein.\n", encoding="utf-8")
+            "Ein ZIP allein richtet dort kein Projekt ein.\n" + portfolio_guide, encoding="utf-8")
     except Exception:
         # Only this call's newly created directory, never an existing workspace.
         shutil.rmtree(dest)
@@ -81,7 +90,13 @@ def wizard(input_fn=input, output=print):
     if input_fn("Jetzt lokal anlegen? [j/N]: ").strip().lower() not in {"j", "ja", "y", "yes"}:
         output("Abgebrochen. Keine Dateien angelegt.")
         return None
-    path = initialize(destination, name, roles, location, assistant)
+    answer = input_fn("Möchtest du auch ein persönliches Portfolio erstellen? [j/N]: ").strip().lower()
+    if answer not in {"", "n", "nein", "no", "j", "ja", "y", "yes"}:
+        raise ValueError("Bitte antworte mit ja oder nein.")
+    portfolio = answer in {"j", "ja", "y", "yes"}
+    path = initialize(destination, name, roles, location, assistant, portfolio)
+    if portfolio:
+        output((path / "resources" / "PORTFOLIO.txt").read_text(encoding="utf-8"))
     output(f"Eingerichtet: {path}\nWeiter mit START_HIER.md. Dein Profil enthält noch keine erfundenen Qualifikationen.")
     if input_fn("Möchtest du das persönliche Interview jetzt starten? [J/n]: ").strip().lower() not in {"n", "nein", "no"}:
         from .interview import interview

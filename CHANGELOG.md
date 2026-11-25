@@ -1,5 +1,9 @@
 # Änderungen
 
+## 0.4.0 (25.11.2026)
+
+- Optionale Portfolio-Startseite im Einrichtungsdialog mit Anleitung für Cloudflare Pages, API-Token, eigene Domain und Nameserver.
+
 ## 0.3.0 (25.11.2026)
 
 - Persönliches Dashboard mit fünf Ansichten, Recherche bei Indeed und der Bundesagentur, Gehaltsvergleich und Gesprächsmappen je Runde.
