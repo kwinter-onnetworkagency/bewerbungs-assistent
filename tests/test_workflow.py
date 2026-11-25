@@ -41,6 +41,8 @@ class WorkflowTest(unittest.TestCase):
         self.assertIn("48 006,00 EUR", note["content"])
         with self.assertRaises(ValueError):
             marktwert(*args, ">4000", "EUR", "2025")
+        with self.assertRaisesRegex(ValueError, "Berufsgruppe, Region"):
+            marktwert(self.w, self.jid, "Sehr lang " * 25, args[3], "Beruf " * 15, *args[5:], "4000", "EUR", "2025")
         self.assertEqual(len(self.w.jobs()[0]["notes"]), 1)
 
     def test_dashboard_keeps_rounds_sources_and_real_status(self):
@@ -70,6 +72,7 @@ class WorkflowTest(unittest.TestCase):
         self.assertNotIn('Beispiel </script>', html)
         self.assertNotIn('sha256', html)
         self.assertTrue(snapshot[0]["notes"][-1]["done"])
+        self.assertEqual(snapshot[0]["notes"][-1]["due"], "2026-01-16")
         self.assertEqual(self.w.jobs()[0]["events"], [])
 
     def test_setup_existing_target_survives(self):

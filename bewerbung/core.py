@@ -236,6 +236,8 @@ class Workspace:
             if evidence:
                 entry["evidence"] = self.evidence(evidence)
             previous = next((n for n in reversed(notes) if (n["kind"], n["title"]) == (kind, title)), {})
+            if done and previous and due is None:
+                entry["due"] = previous.get("due")
             if {k: v for k, v in previous.items() if k != "recorded_at"} == entry:
                 return
             notes.append(dict(entry, recorded_at=now()))

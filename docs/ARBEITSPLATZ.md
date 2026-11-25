@@ -40,7 +40,7 @@ python3 start.py notiz STELLEN-ID --art aufgabe --titel "Termin abstimmen" --tex
 python3 start.py bericht
 ```
 
-Für eine schriftlich belegte Gehaltsspanne verwende `arbeitgeberband`. Beträge gehören zusammen mit ihrer Bezugsbasis in den Text. Nutze einen belegten Direktlink oder den privaten Nachweis mit `--beleg DATEI`. Wiederhole `--quelle` für weitere URLs. Ergänze `--datum JJJJ-MM-TT` für eine belegte Frist oder einen Termin. Eine Aufgabe lässt sich mit gleichem Titel und `--erledigt` abschließen. Beim Wechsel auf Windows ist der lokale Interpreter meist `python`. Ohne lokale Schreibmöglichkeit gib die Mappe und die Änderungen direkt im Chat zur Prüfung zurück.
+Für eine schriftlich belegte Gehaltsspanne verwende `arbeitgeberband`. Beträge gehören zusammen mit ihrer Bezugsbasis in den Text. Nutze einen belegten Direktlink oder den privaten Nachweis mit `--beleg DATEI`. Wiederhole `--quelle` für weitere URLs. Ergänze `--datum JJJJ-MM-TT` für eine belegte Frist oder einen Termin. Eine Aufgabe lässt sich mit gleichem Titel, Textdatei und `--erledigt` abschließen. Die letzte Fassung zeigt den neu übergebenen Text. Eine zuvor erfasste Frist wird übernommen. Beim Wechsel auf Windows ist der lokale Interpreter meist `python`. Ohne lokale Schreibmöglichkeit gib die Mappe und die Änderungen direkt im Chat zur Prüfung zurück.
 
 Exakte Vergleichswerte kann der Assistent über `gehaltswert` strukturiert erfassen. Beispiel mit fiktiven Daten:
 

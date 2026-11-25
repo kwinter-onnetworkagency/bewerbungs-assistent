@@ -22,5 +22,6 @@ def marktwert(workspace, jid, title, source, role, region, basis, period, statis
     if period == "Monat":
         lines.append(f"Jahreshochrechnung: {number(amount * 12)} {currency} (12 Monatswerte).")
     key = f"{title} · {group} · {statistic} · {period} · {basis} · {currency}"
+    if len(key) > 300:
+        raise ValueError("Für diesen Vergleich Titel, Berufsgruppe, Region und Bezugsbasis zusammen kürzer angeben.")
     workspace.add_note(jid, "marktvergleich", key, "\n".join(lines), [source])
-
