@@ -22,7 +22,7 @@ test('Vier Einstiege erzeugen nutzbare Kurzbefehle in einem neuen persönlichen 
       assert.ok(instructions.includes('/' + name + ' '))
       if (mode === 'claude-code' || mode === 'codex') {
         const skill = fs.readFileSync(path.join(dest, mode === 'codex' ? '.agents':'.claude','skills',name,'SKILL.md'),'utf8')
-        assert.ok(skill.includes('name: ' + name + '\n'))
+        assert.ok(skill.split(/\r?\n/).includes('name: ' + name))
       }
     }
     assert.equal(JSON.parse(fs.readFileSync(path.join(dest,'profil.json'))).name,'Testperson')
