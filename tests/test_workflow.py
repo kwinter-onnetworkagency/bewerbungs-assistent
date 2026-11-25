@@ -131,11 +131,21 @@ class WorkflowTest(unittest.TestCase):
     def test_domain_registration_wizard(self):
         for choice, route in [("1", "onnetwork"), ("2", "cloudflare"), ("", "spaeter")]:
             dest = self.base / route
-            answers = iter(["Alex", "", "", "", str(dest), "", "n", choice, "j", "n"])
+            answers = iter(["Alex", "", "", "", str(dest), "", "n", choice] + (["keine domain", "bu\u0308cher.de"] if route == "onnetwork" else []) + ["j", "n"])
             wizard(lambda _: next(answers), lambda _: None)
             self.assertEqual(read(dest / "workspace.json")["domainweg"], route)
             if route == "onnetwork":
-                self.assertIn("Neue Domain bestellen", (dest / "START_HIER.md").read_text(encoding="utf-8"))
+                self.assertIn("/domains/new?domain=b%C3%BCcher.de", (dest / "START_HIER.md").read_text(encoding="utf-8"))
+
+    def test_wish_domain_rejects_url_and_unrelated_route_before_writing(self):
+        dest = self.base / "unvollstaendig"
+        for route, wish in [
+            ("onnetwork", "https://example.org/kontakt"), ("spaeter", "example.org"),
+            ("onnetwork", "ü" * 60 + ".de"), ("onnetwork", ".".join(["ü" * 55] * 5 + ["de"])),
+        ]:
+            with self.assertRaises(ValueError):
+                initialize(dest, "Beispiel", [], "", "codex", True, route, wish)
+            self.assertFalse(dest.exists())
 
     def test_concurrent_interview_edit_is_not_overwritten(self):
         counter = 0

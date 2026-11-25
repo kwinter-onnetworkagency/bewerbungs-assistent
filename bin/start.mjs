@@ -2,14 +2,30 @@
 import * as fs from 'node:fs'
 import { homedir } from 'node:os'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { domainToASCII, fileURLToPath } from 'node:url'
 import { createInterface } from 'node:readline/promises'
 import { parseArgs } from 'node:util'
 
 const source = fileURLToPath(new URL('../', import.meta.url))
 const modes = ['chatgpt', 'claude', 'claude-code', 'codex']
 const domainRoutes = JSON.parse(fs.readFileSync(path.join(source, 'resources/domainwege.json'), 'utf8'))
-function install(target, mode, name, portfolio, route) {
+function domainGuide(route, input) {
+  const guide = domainRoutes[route] ?? ''
+  const wish = (input ?? '').trim().normalize('NFC')
+  if (!wish) return guide
+  const labels = wish.split('.')
+  const ascii = domainToASCII(wish)
+  const validLabel = /^[\p{L}\p{N}](?:[\p{L}\p{N}-]*[\p{L}\p{N}])?$/u
+  if (route !== 'onnetwork' || labels.length < 2 || !labels.every(label => validLabel.test(label))
+      || !/^\p{L}./u.test(labels.at(-1)) || !ascii || ascii.length > 253
+      || ascii.split('.').some(label => label.length > 63)) {
+    throw Error('Für die Agenturbestellung bitte nur eine Wunschdomain mit Endung eingeben, z. B. beispiel.de.')
+  }
+  const form = 'https://customer.onnetwork.agency/portal/domains/new'
+  return guide.replace(form, form + '?domain=' + encodeURIComponent(wish))
+}
+
+function install(target, mode, name, portfolio, route, guide) {
   if (!modes.includes(mode)) throw Error('Wähle chatgpt, claude, claude-code oder codex.')
   if (!name.trim() || [...name].length > 200 || /[\x00-\x1f]/.test(name)) throw Error('Bitte einen gültigen Profilnamen angeben.')
   const homeRelative = target.startsWith("~/") || (process.platform === "win32" && target.startsWith("~\\"))
@@ -38,7 +54,7 @@ function install(target, mode, name, portfolio, route) {
     const put = (file, value) => fs.writeFileSync(path.join(dest, file), value, {mode: 0o600})
     const choice = '\nPortfolio-Auswahl im Wizard: ' + (portfolio ? 'Ja' : 'Nein') + '. Im Interview berücksichtigen.\n'
     const instructions = fs.readFileSync(path.join(source, 'resources/ASSISTENT.txt'), 'utf8')
-      + choice + (route ? "\nDomainweg: " + domainRoutes[route] + "\n" : "")
+      + choice + (route ? "\nDomainweg: " + guide + "\n" : "")
     let portfolioGuide = ''
     if (portfolio) {
       const folder = path.join(dest, 'portfolio/public')
@@ -47,7 +63,7 @@ function install(target, mode, name, portfolio, route) {
       const template = fs.readFileSync(path.join(source, 'resources/Portfolio.html'), 'utf8')
       put('portfolio/public/index.html', template.replaceAll('__NAME__', () => safeName))
       portfolioGuide = '\n' + fs.readFileSync(path.join(source, 'resources/PORTFOLIO.txt'), 'utf8')
-      if (route) portfolioGuide += '\n' + domainRoutes[route] + '\n'
+      if (route) portfolioGuide += '\n' + guide + '\n'
     }
     put('integration/PROJEKTANWEISUNG.txt', instructions)
     if (mode === 'claude-code' || mode === 'codex') {
@@ -76,9 +92,9 @@ function inside(candidate, base) {
   return rel === '' || (!path.isAbsolute(rel) && rel !== '..' && !rel.startsWith('..' + path.sep))
 }
 async function main() {
-  const {values} = parseArgs({options: {hilfe: {type:'boolean'}, help: {type:'boolean', short:'h'}, version: {type:'boolean'}, ziel: {type:'string'}, assistent: {type:'string'}, name: {type:'string'}, portfolio: {type:'string'}, domainweg: {type:'string'}}})
+  const {values} = parseArgs({options: {hilfe: {type:'boolean'}, help: {type:'boolean', short:'h'}, version: {type:'boolean'}, ziel: {type:'string'}, assistent: {type:'string'}, name: {type:'string'}, portfolio: {type:'string'}, domainweg: {type:'string'}, wunschdomain: {type:'string'}}})
   if (values.version) return console.log(JSON.parse(fs.readFileSync(path.join(source,'package.json'))).version)
-  if (values.help || values.hilfe) return console.log('Bewerbungs-Assistent einrichten\nOhne Optionen startet der Dialog. Alternativ: --assistent chatgpt|claude|claude-code|codex --name NAME --ziel NEUER_ORDNER [--portfolio ja|nein] [--domainweg vorhanden|onnetwork|cloudflare|spaeter]\nIm Assistenten mit /interview beginnen, in Codex mit $interview.')
+  if (values.help || values.hilfe) return console.log('Bewerbungs-Assistent einrichten\nOhne Optionen startet der Dialog. Alternativ: --assistent chatgpt|claude|claude-code|codex --name NAME --ziel NEUER_ORDNER [--portfolio ja|nein] [--domainweg vorhanden|onnetwork|cloudflare|spaeter] [--wunschdomain beispiel.de]\nIm Assistenten mit /interview beginnen, in Codex mit $interview.')
   const rl = createInterface({input: process.stdin, output: process.stdout})
   const defaultTarget = path.join(homedir(), 'Bewerbungen', 'Mein-Bewerbungsprojekt')
   try {
@@ -120,7 +136,21 @@ async function main() {
         }
       }
     }
-    install(dest, mode, name, portfolio, route)
+    let guide
+    if (values.wunschdomain === undefined && interactive && route === 'onnetwork') {
+      while (true) {
+        const wish = await ask('Welche Wunschdomain soll im Bestellformular stehen? (optional, z. B. beispiel.de): ')
+        try {
+          guide = domainGuide(route, wish)
+          break
+        } catch (error) {
+          console.log(error.message)
+        }
+      }
+    } else {
+      guide = domainGuide(route, values.wunschdomain)
+    }
+    install(dest, mode, name, portfolio, route, guide)
   } finally { rl.close() }
 }
 main().catch(error => { console.error(error.code === 'EEXIST' ? 'Ziel existiert bereits. Bitte einen neuen Ordner wählen.' : error.message); process.exitCode = 1 })
