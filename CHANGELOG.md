@@ -1,5 +1,9 @@
 # Änderungen
 
+## 0.5.1 (25.11.2026)
+
+- Direktlink zum Bestellformular von on:NetworkAgency mit optional vorausgefüllter Wunschdomain.
+
 ## 0.5.0 (25.11.2026)
 
 - Portfolio als Voreinstellung mit geführter Domainwahl, Bestellweg bei on:NetworkAgency und kostenlosem Einstieg.

@@ -7,12 +7,12 @@ Du kannst mit einem Chat-Projekt beginnen oder einen lokalen Arbeitsordner einri
 Mit [Node.js ab 20 samt npm](https://nodejs.org/) und [Git](https://git-scm.com/downloads) starte im Terminal:
 
 ```sh
-npx github:kwinter-onnetworkagency/bewerbungs-assistent#v0.5.0
+npx github:kwinter-onnetworkagency/bewerbungs-assistent#v0.5.1
 ```
 
 Das persönliche Portfolio ist mit **Ja** voreingestellt. Danach fragt der Wizard, ob du eine eigene Domain besitzt. Du kannst eine vorhandene Domain verbinden, eine neue bei on:NetworkAgency oder Cloudflare registrieren oder mit einer kostenlosen Pages-Adresse starten. [Portfolio einrichten](PORTFOLIO.md)
 
-Auch ohne Dialog wird die lokale Startseite angelegt. Mit `--portfolio nein` überspringst du sie. Optional legt `--domainweg vorhanden|onnetwork|cloudflare|spaeter` den Weg fest. Ohne diese Angabe fragt das Interview nach der Domain.
+Auch ohne Dialog wird die lokale Startseite angelegt. Mit `--portfolio nein` überspringst du sie. Optional legt `--domainweg vorhanden|onnetwork|cloudflare|spaeter` den Weg fest. Ohne diese Angabe fragt das Interview nach der Domain. Mit `--domainweg onnetwork --wunschdomain beispiel.de` bekommst du einen direkten Link zur Domainbestellung mit vorausgefüllter Suche.
 
 Beim ersten Start kann npm um Bestätigung für den Download bitten. Der Assistent fragt nach Arbeitsumgebung, Profilname und einem neuen privaten Zielordner. Öffne diesen Ordner in Claude Code und gib `/interview` ein. In Codex starte mit `$interview`. Für ChatGPT und Claude im Browser zeigt dir der Dialog die beiden benötigten Dateien. Bereits eingerichtete Ordner bleiben erhalten.
 

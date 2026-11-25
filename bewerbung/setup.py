@@ -3,6 +3,8 @@ from html import escape
 from pathlib import Path
 import shutil
 import json
+import unicodedata
+from urllib.parse import quote
 
 from .core import text, validate_profile, write, now, Workspace
 
@@ -13,9 +15,35 @@ ASSISTANTS = {"chatgpt": "ChatGPT-Projekt", "claude": "Claude-Projekt", "claude-
 DOMAIN_ROUTES = json.loads((SOURCE / "resources" / "domainwege.json").read_text(encoding="utf-8"))
 
 
-def initialize(destination, name, roles, location, assistant, portfolio=True, route=None):
+def domain_guide(portfolio, route, wish):
     if route is not None and (not portfolio or route not in DOMAIN_ROUTES):
         raise ValueError("Bitte einen gültigen Domainweg mit aktivem Portfolio wählen.")
+    guide = DOMAIN_ROUTES.get(route, "")
+    wish = unicodedata.normalize("NFC", (wish or "").strip())
+    if not wish:
+        return guide
+
+    invalid = "Für die Agenturbestellung bitte nur eine Wunschdomain mit Endung eingeben, z. B. beispiel.de."
+    # Punycode measures the DNS wire label without mapping ß to ss as IDNA 2003 does.
+    labels = wish.lower().split(".")
+    ascii_labels = [label if label.isascii() else "xn--" + label.encode("punycode").decode("ascii")
+                    for label in labels]
+    if (route != "onnetwork" or len(labels) < 2 or len(labels[-1]) < 2 or not labels[-1][0].isalpha()
+            or len(".".join(ascii_labels)) > 253
+            or any(not label.replace("-", "").isalnum() or label.startswith("-") or label.endswith("-")
+                   for label in labels)
+            or any(len(label) > 63 for label in ascii_labels)):
+        raise ValueError(invalid)
+    form = "https://customer.onnetwork.agency/portal/domains/new"
+    return guide.replace(form, form + "?domain=" + quote(wish, safe=""))
+
+
+def initialize(destination, name, roles, location, assistant, portfolio=True, route=None, wish=None):
+    guide = domain_guide(portfolio, route, wish)
+    return _write_workspace(destination, name, roles, location, assistant, portfolio, route, guide)
+
+
+def _write_workspace(destination, name, roles, location, assistant, portfolio, route, guide):
     dest = Path(destination).expanduser().absolute()
     if assistant not in ASSISTANTS:
         raise ValueError("Unbekannter Assistent.")
@@ -54,8 +82,8 @@ def initialize(destination, name, roles, location, assistant, portfolio=True, ro
         if portfolio is not None:
             instructions += "\nPortfolio-Auswahl im Wizard: " + ("Ja" if portfolio else "Nein") + ". Im Interview berücksichtigen.\n"
         if route:
-            portfolio_guide += "\n" + DOMAIN_ROUTES[route] + "\n"
-            instructions += "\nDomainweg: " + DOMAIN_ROUTES[route] + "\n"
+            portfolio_guide += "\n" + guide + "\n"
+            instructions += "\nDomainweg: " + guide + "\n"
         instructions += "\nArbeitsmodus: " + ASSISTANTS[assistant] + ".\n"
         (dest / "integration" / "PROJEKTANWEISUNG.txt").write_text(instructions, encoding="utf-8")
         if assistant in {"claude-code", "codex"}:
@@ -83,7 +111,7 @@ def initialize(destination, name, roles, location, assistant, portfolio=True, ro
     return dest.resolve()
 
 
-def wizard(input_fn=input, output=print, portfolio=None, route=None):
+def wizard(input_fn=input, output=print, portfolio=None, route=None, wish=None):
     output("Bewerbungs-Assistent: persönliche Einrichtung")
     output("Benötigt Python ab 3.11. Kein API-Schlüssel, kein Versand, keine Anmeldung durch dieses Programm.")
     name = input_fn("Wie möchtest du im Profil heißen? ").strip()
@@ -119,17 +147,25 @@ def wizard(input_fn=input, output=print, portfolio=None, route=None):
                 route = options.get(pick or "3")
                 if route is None:
                     output("Bitte wähle 1, 2 oder 3.")
-    if route and not portfolio:
-        raise ValueError("Ein Domainweg setzt ein aktives Portfolio voraus.")
+    if portfolio and route == "onnetwork" and wish is None:
+        while True:
+            wish = input_fn("Welche Wunschdomain soll im Bestellformular stehen? (optional, z. B. beispiel.de): ")
+            try:
+                guide = domain_guide(portfolio, route, wish)
+                break
+            except ValueError as error:
+                output(str(error))
+    else:
+        guide = domain_guide(portfolio, route, wish)
     output(f"Anlegen: {destination}\nProfil: {name}\nAssistent: {ASSISTANTS[assistant]}\nPortfolio: {'Ja' if portfolio else 'Nein'}")
     if input_fn("Jetzt lokal anlegen? [j/N]: ").strip().lower() not in {"j", "ja", "y", "yes"}:
         output("Abgebrochen. Keine Dateien angelegt.")
         return None
-    path = initialize(destination, name, roles, location, assistant, portfolio, route)
+    path = _write_workspace(destination, name, roles, location, assistant, portfolio, route, guide)
     if portfolio:
         output((path / "resources" / "PORTFOLIO.txt").read_text(encoding="utf-8"))
         if route:
-            output(DOMAIN_ROUTES[route])
+            output(guide)
     output(f"Eingerichtet: {path}\nWeiter mit START_HIER.md. Dein Profil enthält noch keine erfundenen Qualifikationen.")
     if input_fn("Möchtest du das persönliche Interview jetzt starten? [J/n]: ").strip().lower() not in {"n", "nein", "no"}:
         from .interview import interview

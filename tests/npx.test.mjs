@@ -75,12 +75,28 @@ test('Portfolio nur auf Wunsch, mit lokalem Uploadordner und Cloudflare-Anleitun
 test('Der gewählte Domainweg erscheint im Arbeitsordner und im Interview', t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'domainwahl-'))
   t.after(() => fs.rmSync(root, {recursive:true, force:true}))
-  for (const [route, marker] of Object.entries({vorhanden:'Eigene Domain verbinden', onnetwork:'Neue Domain bestellen', cloudflare:'Register domains', spaeter:'kostenlosen pages.dev-Adresse starten'})) {
+  for (const [route, marker] of Object.entries({vorhanden:'Eigene Domain verbinden', onnetwork:'/domains/new?domain=b%C3%BCcher.de', cloudflare:'Register domains', spaeter:'kostenlosen pages.dev-Adresse starten'})) {
     const dest = path.join(root, route)
-    const run = spawnSync(process.execPath, [launcher, '--assistent','chatgpt','--name','Beispiel','--ziel',dest,'--domainweg',route], {encoding:'utf8'})
+    const run = spawnSync(process.execPath, [launcher, '--assistent','chatgpt','--name','Beispiel','--ziel',dest,'--domainweg',route, ...(route === 'onnetwork' ? ['--wunschdomain','bu\u0308cher.de'] : [])], {encoding:'utf8'})
     assert.equal(run.status, 0, run.stderr)
     assert.equal(JSON.parse(fs.readFileSync(path.join(dest, 'workspace.json'))).domainweg, route)
     for (const file of ['START_HIER.md','integration/PROJEKTANWEISUNG.txt'])
       assert.ok(fs.readFileSync(path.join(dest,file),'utf8').includes(marker))
+  }
+})
+
+test('Unzulässige Wunschdomain bricht vor dem Anlegen des Ordners ab', t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'domainpruefung-'))
+  t.after(() => fs.rmSync(root, {recursive:true, force:true}))
+  const dest = path.join(root, 'projekt')
+  for (const [route, wish] of [
+    ['onnetwork', 'https://example.org/kontakt'], ['spaeter', 'example.org'],
+    ['onnetwork', 'ü'.repeat(60) + '.de'], ['onnetwork', [...Array(5).fill('ü'.repeat(55)), 'de'].join('.')],
+  ]) {
+    const run = spawnSync(process.execPath, [launcher, '--assistent', 'codex', '--name', 'Alex',
+      '--ziel', dest, '--domainweg', route, '--wunschdomain', wish], {encoding:'utf8'})
+    assert.equal(run.status, 1)
+    assert.match(run.stderr, /Wunschdomain/)
+    assert.ok(!fs.existsSync(dest))
   }
 })
