@@ -8,7 +8,8 @@ import { parseArgs } from 'node:util'
 
 const source = fileURLToPath(new URL('../', import.meta.url))
 const modes = ['chatgpt', 'claude', 'claude-code', 'codex']
-function install(target, mode, name, portfolio) {
+const domainRoutes = JSON.parse(fs.readFileSync(path.join(source, 'resources/domainwege.json'), 'utf8'))
+function install(target, mode, name, portfolio, route) {
   if (!modes.includes(mode)) throw Error('Wähle chatgpt, claude, claude-code oder codex.')
   if (!name.trim() || [...name].length > 200 || /[\x00-\x1f]/.test(name)) throw Error('Bitte einen gültigen Profilnamen angeben.')
   const homeRelative = target.startsWith("~/") || (process.platform === "win32" && target.startsWith("~\\"))
@@ -35,9 +36,9 @@ function install(target, mode, name, portfolio) {
     for (const entry of ['bewerbung', 'start.py', 'docs', 'resources', 'LICENSE'])
       fs.cpSync(path.join(source, entry), path.join(dest, entry), {recursive: true, filter: p => path.basename(p) !== '__pycache__'})
     const put = (file, value) => fs.writeFileSync(path.join(dest, file), value, {mode: 0o600})
-    const choice = portfolio === null ? '' : '\nPortfolio-Auswahl im Wizard: ' + (portfolio ? 'Ja' : 'Nein') + '. Im Interview berücksichtigen.\n'
+    const choice = '\nPortfolio-Auswahl im Wizard: ' + (portfolio ? 'Ja' : 'Nein') + '. Im Interview berücksichtigen.\n'
     const instructions = fs.readFileSync(path.join(source, 'resources/ASSISTENT.txt'), 'utf8')
-      + choice
+      + choice + (route ? "\nDomainweg: " + domainRoutes[route] + "\n" : "")
     let portfolioGuide = ''
     if (portfolio) {
       const folder = path.join(dest, 'portfolio/public')
@@ -46,6 +47,7 @@ function install(target, mode, name, portfolio) {
       const template = fs.readFileSync(path.join(source, 'resources/Portfolio.html'), 'utf8')
       put('portfolio/public/index.html', template.replaceAll('__NAME__', () => safeName))
       portfolioGuide = '\n' + fs.readFileSync(path.join(source, 'resources/PORTFOLIO.txt'), 'utf8')
+      if (route) portfolioGuide += '\n' + domainRoutes[route] + '\n'
     }
     put('integration/PROJEKTANWEISUNG.txt', instructions)
     if (mode === 'claude-code' || mode === 'codex') {
@@ -57,7 +59,7 @@ function install(target, mode, name, portfolio) {
     put('profil.json', JSON.stringify(profile, null, 2) + '\n')
     fs.copyFileSync(path.join(source,'resources/Dashboard.html'), path.join(dest,'exports/Dashboard.html'))
     put('bewerbungen.json', '[]\n')
-    put('workspace.json', JSON.stringify({schema_version: 1, assistant: mode, portfolio, created_at: new Date().toISOString()}, null, 2))
+    put('workspace.json', JSON.stringify({schema_version: 1, assistant: mode, portfolio, domainweg: route, created_at: new Date().toISOString()}, null, 2))
     put('.gitignore', '*\n')
     const next = mode === 'codex' ? 'Öffne diesen Ordner in Codex und schreibe $interview.'
       : mode === 'claude-code' ? 'Öffne diesen Ordner in Claude Code und schreibe /interview.'
@@ -74,9 +76,9 @@ function inside(candidate, base) {
   return rel === '' || (!path.isAbsolute(rel) && rel !== '..' && !rel.startsWith('..' + path.sep))
 }
 async function main() {
-  const {values} = parseArgs({options: {hilfe: {type:'boolean'}, help: {type:'boolean', short:'h'}, version: {type:'boolean'}, ziel: {type:'string'}, assistent: {type:'string'}, name: {type:'string'}, portfolio: {type:'string'}}})
+  const {values} = parseArgs({options: {hilfe: {type:'boolean'}, help: {type:'boolean', short:'h'}, version: {type:'boolean'}, ziel: {type:'string'}, assistent: {type:'string'}, name: {type:'string'}, portfolio: {type:'string'}, domainweg: {type:'string'}}})
   if (values.version) return console.log(JSON.parse(fs.readFileSync(path.join(source,'package.json'))).version)
-  if (values.help || values.hilfe) return console.log('Bewerbungs-Assistent einrichten\nOhne Optionen startet der Dialog. Alternativ: --assistent chatgpt|claude|claude-code|codex --name NAME --ziel NEUER_ORDNER [--portfolio ja|nein]\nIm Assistenten mit /interview beginnen, in Codex mit $interview.')
+  if (values.help || values.hilfe) return console.log('Bewerbungs-Assistent einrichten\nOhne Optionen startet der Dialog. Alternativ: --assistent chatgpt|claude|claude-code|codex --name NAME --ziel NEUER_ORDNER [--portfolio ja|nein] [--domainweg vorhanden|onnetwork|cloudflare|spaeter]\nIm Assistenten mit /interview beginnen, in Codex mit $interview.')
   const rl = createInterface({input: process.stdin, output: process.stdout})
   const defaultTarget = path.join(homedir(), 'Bewerbungen', 'Mein-Bewerbungsprojekt')
   try {
@@ -89,17 +91,36 @@ async function main() {
     const dest = values.ziel ?? ((await ask('Neuer privater Ordner [' + defaultTarget + ']: ')) || defaultTarget)
     if (!dest.trim()) throw Error('Bitte einen neuen Zielordner angeben.')
     const guided = [values.name, values.ziel, values.assistent].some(value => value === undefined)
-    const yes = ['j', 'ja', 'y', 'yes']
-    const no = ['', 'n', 'nein', 'no']
-    let answer = values.portfolio?.trim().toLowerCase()
-    if (answer === undefined && guided && process.stdin.isTTY) {
-      do {
-        answer = (await ask('Möchtest du auch ein persönliches Portfolio erstellen? [j/N]: ')).toLowerCase()
-      } while (!yes.includes(answer) && !no.includes(answer))
+    const interactive = guided && process.stdin.isTTY
+    const yesNo = async (given, prompt, fallback) => {
+      let answer = given
+      while (true) {
+        if (answer === undefined && !interactive) return fallback
+        answer = (answer ?? await ask(prompt)).trim().toLowerCase()
+        if (!answer && given === undefined) return fallback
+        if (['j', 'ja', 'y', 'yes'].includes(answer)) return true
+        if (['n', 'nein', 'no'].includes(answer)) return false
+        if (given !== undefined) throw Error('Bitte antworte mit ja oder nein.')
+        console.log('Bitte antworte mit ja oder nein.')
+        answer = undefined
+      }
     }
-    if (answer !== undefined && !yes.includes(answer) && !no.includes(answer))
-      throw Error('Bitte antworte mit ja oder nein.')
-    install(dest, mode, name, answer === undefined ? null : yes.includes(answer))
+    const portfolio = await yesNo(values.portfolio, 'Möchtest du auch ein persönliches Portfolio erstellen? [J/n]: ', true)
+    let route = values.domainweg ?? null
+    if (route !== null && (!portfolio || !Object.hasOwn(domainRoutes, route)))
+      throw Error('Bitte einen gültigen Domainweg mit aktivem Portfolio wählen.')
+    if (portfolio && route === null && interactive) {
+      if (await yesNo(undefined, 'Besitzt du eine eigene Domain? [j/N]: ', false)) route = 'vorhanden'
+      else {
+        const options = new Map([['1', 'onnetwork'], ['2', 'cloudflare'], ['3', 'spaeter']])
+        while (!route) {
+          const pick = await ask('Wie möchtest du starten? 1 Domain bei on:NetworkAgency registrieren, 2 bei Cloudflare registrieren, 3 kostenlose pages.dev-Adresse [3]: ')
+          route = options.get(pick || '3')
+          if (!route) console.log('Bitte wähle 1, 2 oder 3.')
+        }
+      }
+    }
+    install(dest, mode, name, portfolio, route)
   } finally { rl.close() }
 }
 main().catch(error => { console.error(error.code === 'EEXIST' ? 'Ziel existiert bereits. Bitte einen neuen Ordner wählen.' : error.message); process.exitCode = 1 })

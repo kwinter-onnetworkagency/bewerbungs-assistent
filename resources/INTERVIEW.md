@@ -6,11 +6,17 @@ Kopiere diesen Startsatz in dein privates Claude-/ChatGPT-Projekt oder gib ihn d
 
 ## Optionales persönliches Portfolio
 
-Übernimm eine bereits dokumentierte Portfolio-Auswahl aus den Projektanweisungen oder dem bisherigen Gespräch. Fehlt sie beim ersten Start im Browser, frage genau einmal: „Möchtest du auch ein persönliches Portfolio erstellen?“ Bei Nein direkt mit dem Profil fortfahren. Bei Ja eine lokale Startseite unter `portfolio/public/index.html` anlegen oder den Entwurf aus dem Wizard verwenden. Mit ausdrücklich freigegebenem Kurzprofil und Arbeitsproben ausarbeiten. In einem reinen Chat-Projekt die HTML-Datei zum Herunterladen bereitstellen. Nur falls die notwendigen Inhalte noch fehlen, nachfragen. Zeige anschließend den Weg von der kostenlosen Pages-Adresse bis zur optionalen eigenen Domain. Veröffentlichen, Domain kaufen und Nameserver ändern übernimmt die Person selbst. [Schritt für Schritt mit Cloudflare Pages](https://github.com/kwinter-onnetworkagency/bewerbungs-assistent/blob/v0.4.0/docs/PORTFOLIO.md)
+Stelle jeweils eine Frage. Übernimm bekannte Entscheidungen aus den Projektanweisungen oder dem bisherigen Gespräch.
+
+1. „Möchtest du auch ein persönliches Portfolio erstellen? (Vorgabe: Ja)“ Bei Nein direkt mit dem Profil fortfahren.
+2. Bei Ja: „Besitzt du eine eigene Domain?“ Wer schon eine besitzt, kann die Hauptdomain oder eine Subdomain mit Cloudflare Pages verbinden.
+3. Ohne Domain: „Möchtest du deine Wunschdomain bei on:NetworkAgency oder bei Cloudflare registrieren oder mit der kostenlosen pages.dev-Adresse starten?“ Bei on:NetworkAgency führe Bestandskunden im [Kundenportal](https://customer.onnetwork.agency/portal/domains) zu **Neue Domain bestellen**. Neukunden können die Wunschdomain und den Verlängerungspreis über den [Agenturkontakt](https://onnetwork.agency/kontakt/) anfragen. Begleite die gewählte Registrierung Schritt für Schritt. Die Person prüft Preis und Verlängerung und bestätigt einen Kauf selbst.
+
+Erstelle die lokale Startseite unter `portfolio/public/index.html` oder verwende den Entwurf aus dem Wizard. Ergänze nur freigegebenes Kurzprofil und Arbeitsproben. In einem reinen Chat-Projekt stelle die HTML-Datei zum Herunterladen bereit. Namen, Zugangsdaten und Wunschdomain werden vom Wizard nicht an einen Anbieter übertragen. [Anleitung für Cloudflare Pages und eigene Domains](https://github.com/kwinter-onnetworkagency/bewerbungs-assistent/blob/v0.5.0/docs/PORTFOLIO.md)
 
 ## Ablauf für den Assistenten
 
-Beginne mit der Frage, ob ein Lebenslauf und vorhandene Nachweise als Grundlage genutzt werden sollen oder ob das Profil im Gespräch entsteht. Die Dateien werden vom Nutzer selbst im privaten Projekt bereitgestellt. Fordere keine Zugangsdaten an.
+Nach der Portfolio- und Domainwahl frage, ob ein Lebenslauf und vorhandene Nachweise als Grundlage genutzt werden sollen oder ob das Profil im Gespräch entsteht. Die Dateien werden vom Nutzer selbst im privaten Projekt bereitgestellt. Fordere keine Zugangsdaten an.
 
 Gehe diese Themen in passenden Gesprächsschritten durch. Frage nach, wenn eine Antwort für die Suche oder die Wahrheit einer Bewerbung wichtig ist. Sage, wie viele Themen noch offen sind. Bei einer Unterbrechung gib den bisherigen Interviewstand als herunterladbare Datei zurück; beim nächsten Gespräch dort fortsetzen.
 

@@ -99,7 +99,7 @@ class WorkflowTest(unittest.TestCase):
 
     def test_wizard_cancel_has_no_writes(self):
         dest = self.base / "cancelled"
-        answers = iter(["Alex", "Analyst", "", "1", str(dest), "", "n"])
+        answers = iter(["Alex", "Analyst", "", "1", str(dest), "n", "n"])
         self.assertIsNone(wizard(lambda _: next(answers), lambda _: None))
         self.assertFalse(dest.exists())
 
@@ -109,16 +109,16 @@ class WorkflowTest(unittest.TestCase):
             options = ["einrichten", "--ziel", str(dest), "--name", "A & <B>", "--assistent", "codex"]
             with contextlib.redirect_stdout(io.StringIO()):
                 main(options + (["--portfolio", answer] if answer else []))
-            self.assertEqual(read(dest / "workspace.json")["portfolio"], None if not answer else answer == "ja")
-            self.assertEqual("Portfolio-Auswahl" in (dest / "AGENTS.md").read_text(encoding="utf-8"), bool(answer))
-            self.assertEqual((dest / "portfolio").exists(), answer == "ja")
+            self.assertEqual(read(dest / "workspace.json")["portfolio"], answer != "nein")
+            self.assertIn("Portfolio-Auswahl", (dest / "AGENTS.md").read_text(encoding="utf-8"))
+            self.assertEqual((dest / "portfolio").exists(), answer != "nein")
             if answer == "ja":
                 self.assertIn("A &amp; &lt;B&gt;", (dest / "portfolio/public/index.html").read_text(encoding="utf-8"))
 
     def test_wizard_runs_personal_interview_after_install(self):
         dest = self.base / "Direkt eingerichtetes Projekt"
         values = {"location": "Teststadt", "work_model": "Zwei Bürotage", "education": "Berufsausbildung 2021"}
-        answers = iter(["Alex", "Projektmanager", "Remote", "3", str(dest), "j", "j", "j"] +
+        answers = iter(["Alex", "Projektmanager", "Remote", "3", str(dest), "", "j", "j", "j"] +
                        [values.get(k, "") for k, _, _ in QUESTIONS] + ["j"])
         self.assertEqual(wizard(lambda _: next(answers), lambda _: None), dest.resolve())
         self.assertEqual(read(dest / "profil.json")["preferences"]["work_model"], "Zwei Bürotage")
@@ -127,6 +127,15 @@ class WorkflowTest(unittest.TestCase):
         self.assertTrue(read(dest / "workspace.json")["portfolio"])
         self.assertEqual([f.name for f in (dest / "portfolio/public").iterdir()], ["index.html"])
         self.assertIn("Nameserver", (dest / "START_HIER.md").read_text(encoding="utf-8"))
+
+    def test_domain_registration_wizard(self):
+        for choice, route in [("1", "onnetwork"), ("2", "cloudflare"), ("", "spaeter")]:
+            dest = self.base / route
+            answers = iter(["Alex", "", "", "", str(dest), "", "n", choice, "j", "n"])
+            wizard(lambda _: next(answers), lambda _: None)
+            self.assertEqual(read(dest / "workspace.json")["domainweg"], route)
+            if route == "onnetwork":
+                self.assertIn("Neue Domain bestellen", (dest / "START_HIER.md").read_text(encoding="utf-8"))
 
     def test_concurrent_interview_edit_is_not_overwritten(self):
         counter = 0

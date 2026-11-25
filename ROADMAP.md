@@ -15,6 +15,8 @@
 
 ## Erledigt
 
+- Portfolio-Wizard mit Domainwahl und Registrierungswegen veröffentlicht.
+
 - 25.11.2026: Optionaler Portfolio-Einstieg mit lokaler Startseite und Cloudflare-Pages-Anleitung.
 
 - 25.11.2026: Arbeitsübersichten, Gehaltsvergleich, Quellenrecherche und Gesprächsvorbereitung je Stelle.

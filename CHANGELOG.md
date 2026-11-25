@@ -1,5 +1,9 @@
 # Änderungen
 
+## 0.5.0 (25.11.2026)
+
+- Portfolio als Voreinstellung mit geführter Domainwahl, Bestellweg bei on:NetworkAgency und kostenlosem Einstieg.
+
 ## 0.4.0 (25.11.2026)
 
 - Optionale Portfolio-Startseite im Einrichtungsdialog mit Anleitung für Cloudflare Pages, API-Token, eigene Domain und Nameserver.

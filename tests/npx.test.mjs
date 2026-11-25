@@ -18,8 +18,8 @@ test('Vier Einstiege erzeugen nutzbare Kurzbefehle in einem neuen persönlichen 
     const result = setup(dest, mode)
     assert.equal(result.status, 0, result.stderr)
     assert.ok(fs.existsSync(path.join(dest,'exports/Dashboard.html')))
-    assert.equal(JSON.parse(fs.readFileSync(path.join(dest,'workspace.json'))).portfolio, null)
-    assert.ok(!fs.existsSync(path.join(dest,'portfolio')))
+    assert.equal(JSON.parse(fs.readFileSync(path.join(dest,'workspace.json'))).portfolio, true)
+    assert.ok(fs.existsSync(path.join(dest,'portfolio/public/index.html')))
     const instructions = fs.readFileSync(path.join(dest,'integration/PROJEKTANWEISUNG.txt'),'utf8')
     for (const name of commands) {
       assert.ok(instructions.includes('/' + name + ' '))
@@ -69,5 +69,18 @@ test('Portfolio nur auf Wunsch, mit lokalem Uploadordner und Cloudflare-Anleitun
       assert.deepEqual(fs.readdirSync(folder), ['index.html'])
       assert.match(fs.readFileSync(path.join(folder,'index.html'),'utf8'), /A &amp; B &lt;Test&gt; \$&amp;/)
     }
+  }
+})
+
+test('Der gewählte Domainweg erscheint im Arbeitsordner und im Interview', t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'domainwahl-'))
+  t.after(() => fs.rmSync(root, {recursive:true, force:true}))
+  for (const [route, marker] of Object.entries({vorhanden:'Eigene Domain verbinden', onnetwork:'Neue Domain bestellen', cloudflare:'Register domains', spaeter:'kostenlosen pages.dev-Adresse starten'})) {
+    const dest = path.join(root, route)
+    const run = spawnSync(process.execPath, [launcher, '--assistent','chatgpt','--name','Beispiel','--ziel',dest,'--domainweg',route], {encoding:'utf8'})
+    assert.equal(run.status, 0, run.stderr)
+    assert.equal(JSON.parse(fs.readFileSync(path.join(dest, 'workspace.json'))).domainweg, route)
+    for (const file of ['START_HIER.md','integration/PROJEKTANWEISUNG.txt'])
+      assert.ok(fs.readFileSync(path.join(dest,file),'utf8').includes(marker))
   }
 })

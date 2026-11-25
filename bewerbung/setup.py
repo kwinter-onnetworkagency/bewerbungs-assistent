@@ -2,6 +2,7 @@
 from html import escape
 from pathlib import Path
 import shutil
+import json
 
 from .core import text, validate_profile, write, now, Workspace
 
@@ -9,7 +10,12 @@ SOURCE = Path(__file__).resolve().parent.parent
 ASSISTANTS = {"chatgpt": "ChatGPT-Projekt", "claude": "Claude-Projekt", "claude-code": "Claude Code", "codex": "Codex"}
 
 
-def initialize(destination, name, roles, location, assistant, portfolio=None):
+DOMAIN_ROUTES = json.loads((SOURCE / "resources" / "domainwege.json").read_text(encoding="utf-8"))
+
+
+def initialize(destination, name, roles, location, assistant, portfolio=True, route=None):
+    if route is not None and (not portfolio or route not in DOMAIN_ROUTES):
+        raise ValueError("Bitte einen gültigen Domainweg mit aktivem Portfolio wählen.")
     dest = Path(destination).expanduser().absolute()
     if assistant not in ASSISTANTS:
         raise ValueError("Unbekannter Assistent.")
@@ -47,13 +53,16 @@ def initialize(destination, name, roles, location, assistant, portfolio=None):
             portfolio_guide = "\n" + (SOURCE / "resources" / "PORTFOLIO.txt").read_text(encoding="utf-8")
         if portfolio is not None:
             instructions += "\nPortfolio-Auswahl im Wizard: " + ("Ja" if portfolio else "Nein") + ". Im Interview berücksichtigen.\n"
+        if route:
+            portfolio_guide += "\n" + DOMAIN_ROUTES[route] + "\n"
+            instructions += "\nDomainweg: " + DOMAIN_ROUTES[route] + "\n"
         instructions += "\nArbeitsmodus: " + ASSISTANTS[assistant] + ".\n"
         (dest / "integration" / "PROJEKTANWEISUNG.txt").write_text(instructions, encoding="utf-8")
         if assistant in {"claude-code", "codex"}:
             (dest / ("CLAUDE.md" if assistant == "claude-code" else "AGENTS.md")).write_text(instructions, encoding="utf-8")
             skill_dir = ".agents" if assistant == "codex" else ".claude"
             shutil.copytree(dest / "resources" / "skills", dest / skill_dir / "skills")
-        write(dest / "workspace.json", dict(schema_version=1, assistant=assistant, portfolio=portfolio, created_at=now()))
+        write(dest / "workspace.json", dict(schema_version=1, assistant=assistant, portfolio=portfolio, domainweg=route, created_at=now()))
         (dest / "START_HIER.md").write_text(
             "# Dein persönlicher Bewerbungsordner\n\n"
             "Dieser Ordner enthält private Daten. Nicht auf GitHub hochladen.\n\n"
@@ -74,7 +83,7 @@ def initialize(destination, name, roles, location, assistant, portfolio=None):
     return dest.resolve()
 
 
-def wizard(input_fn=input, output=print, portfolio=None):
+def wizard(input_fn=input, output=print, portfolio=None, route=None):
     output("Bewerbungs-Assistent: persönliche Einrichtung")
     output("Benötigt Python ab 3.11. Kein API-Schlüssel, kein Versand, keine Anmeldung durch dieses Programm.")
     name = input_fn("Wie möchtest du im Profil heißen? ").strip()
@@ -87,21 +96,40 @@ def wizard(input_fn=input, output=print, portfolio=None):
     assistant = list(ASSISTANTS)[int(choice)-1]
     default = str(Path.home() / "Bewerbungen" / "Mein-Bewerbungsprojekt")
     destination = input_fn(f"Neuer privater Ordner [{default}]: ").strip() or default
-    if portfolio is None:
-        yes, no = {"j", "ja", "y", "yes"}, {"", "n", "nein", "no"}
+    def yes_no(prompt, default):
         while True:
-            answer = input_fn("Möchtest du auch ein persönliches Portfolio erstellen? [j/N]: ").strip().lower()
-            if answer in yes | no:
-                portfolio = answer in yes
-                break
+            answer = input_fn(prompt).strip().lower()
+            if not answer:
+                return default
+            if answer in {"j", "ja", "y", "yes"}:
+                return True
+            if answer in {"n", "nein", "no"}:
+                return False
             output("Bitte antworte mit ja oder nein.")
+
+    if portfolio is None:
+        portfolio = yes_no("Möchtest du auch ein persönliches Portfolio erstellen? [J/n]: ", True)
+    if portfolio and route is None:
+        if yes_no("Besitzt du eine eigene Domain? [j/N]: ", False):
+            route = "vorhanden"
+        else:
+            options = {"1": "onnetwork", "2": "cloudflare", "3": "spaeter"}
+            while route is None:
+                pick = input_fn("Wie möchtest du starten? 1 Domain bei on:NetworkAgency registrieren, 2 bei Cloudflare registrieren, 3 kostenlose pages.dev-Adresse [3]: ").strip()
+                route = options.get(pick or "3")
+                if route is None:
+                    output("Bitte wähle 1, 2 oder 3.")
+    if route and not portfolio:
+        raise ValueError("Ein Domainweg setzt ein aktives Portfolio voraus.")
     output(f"Anlegen: {destination}\nProfil: {name}\nAssistent: {ASSISTANTS[assistant]}\nPortfolio: {'Ja' if portfolio else 'Nein'}")
     if input_fn("Jetzt lokal anlegen? [j/N]: ").strip().lower() not in {"j", "ja", "y", "yes"}:
         output("Abgebrochen. Keine Dateien angelegt.")
         return None
-    path = initialize(destination, name, roles, location, assistant, portfolio)
+    path = initialize(destination, name, roles, location, assistant, portfolio, route)
     if portfolio:
         output((path / "resources" / "PORTFOLIO.txt").read_text(encoding="utf-8"))
+        if route:
+            output(DOMAIN_ROUTES[route])
     output(f"Eingerichtet: {path}\nWeiter mit START_HIER.md. Dein Profil enthält noch keine erfundenen Qualifikationen.")
     if input_fn("Möchtest du das persönliche Interview jetzt starten? [J/n]: ").strip().lower() not in {"n", "nein", "no"}:
         from .interview import interview

@@ -3,6 +3,5 @@ Dein Portfolio startet lokal in portfolio/public/index.html. Öffne die Datei zu
 1. Kostenlos starten: Auf dash.cloudflare.com/sign-up ein Konto erstellen und die E-Mail-Adresse bestätigen. Mit Cloudflare Pages Free erhältst du eine kostenlose Adresse unter pages.dev.
 2. Veröffentlichen: Unter Workers & Pages ein Pages-Projekt mit Direct Upload anlegen. Nur den freigegebenen Ordner portfolio/public hochladen. Der Upload im Browser braucht keinen API-Token.
 3. Für spätere Uploads per Werkzeug: Einen eigenen API-Token mit der Berechtigung „Account → Cloudflare Pages → Edit“ für das eigene Konto erstellen und im Passwortmanager speichern.
-4. Eigene Domain gewünscht? Kauf- und Verlängerungspreis prüfen. Bei Cloudflare Registrar sind die Nameserver bereits gesetzt. Bei einem anderen Registrar für die Hauptdomain erst DNS-Einträge einschließlich E-Mail und DNSSEC prüfen, dann die beiden von Cloudflare zugewiesenen Nameserver eintragen. Für eine einzelne Subdomain ist auch ein CNAME beim bisherigen DNS-Anbieter möglich.
 
-Die genaue Klickfolge, die Reihenfolge für die Domain und die HTTPS-Prüfung stehen in docs/PORTFOLIO.md.
+Die genaue Klickfolge für Kauf, Nameserver, Subdomains und die HTTPS-Prüfung steht in docs/PORTFOLIO.md.

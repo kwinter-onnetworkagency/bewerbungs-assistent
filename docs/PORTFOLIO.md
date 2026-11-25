@@ -1,6 +1,6 @@
 # Dein persönliches Portfolio mit Cloudflare Pages
 
-Der Wizard fragt einmal: **Möchtest du auch ein persönliches Portfolio erstellen?** Mit **Ja** entsteht in deinem persönlichen Arbeitsordner eine lokale Startseite mit deinem Namen. Mit **Nein** geht es direkt mit den Bewerbungen weiter.
+Der Wizard fragt einmal: **Möchtest du auch ein persönliches Portfolio erstellen?** **Ja** ist voreingestellt. Danach fragt der Wizard: **Besitzt du eine eigene Domain?** Bei Ja zeigt er dir den Anschluss einer vorhandenen Domain. Bei Nein kannst du die Registrierung bei on:NetworkAgency oder Cloudflare wählen oder kostenlos mit einer Pages-Adresse beginnen. Mit Portfolio entsteht in deinem persönlichen Arbeitsordner eine lokale Startseite mit deinem Namen. Mit **Nein** geht es direkt mit den Bewerbungen weiter.
 
 ## 1. Seite vorbereiten
 
@@ -37,6 +37,12 @@ npx wrangler pages deploy portfolio/public --project-name DEIN-PROJEKTNAME
 | Eine vorhandene Domain verwenden | Behalte sie beim bisherigen Registrar. Gehe für die Hauptdomain zu Schritt 5 oder für eine einzelne Subdomain zu Schritt 6. |
 
 Für den Kauf über **Cloudflare Registrar** öffne im Dashboard **Register domains**, suche den gewünschten Namen und wähle **Purchase**. Prüfe Laufzeit, Gesamtpreis und Kontaktdaten. Erst **Complete purchase** löst die kostenpflichtige Bestellung aus. Nach dem Kauf ist Cloudflare bereits als DNS-Anbieter eingetragen. Verbinde die Domain direkt in Pages unter **Custom domains**. Bei einem Kauf bei einem anderen Registrar folge für die Hauptdomain Schritt 5. [Domain bei Cloudflare registrieren](https://developers.cloudflare.com/registrar/get-started/register-domain/)
+
+**Bei on:NetworkAgency registrieren**
+
+1. Mit Kundenkonto öffne den Bereich [Domains im Kundenportal](https://customer.onnetwork.agency/portal/domains) und melde dich an. Wenn du neu bist, frage über den [Kontakt der Agentur](https://onnetwork.agency/kontakt/) deine Wunschdomain und ein Angebot mit Verlängerungspreis an.
+2. Wähle **Neue Domain bestellen**, gib den Namen ein, wähle die Endung und starte die Suche. Prüfe vor dem Kauf den angezeigten Preis, die Laufzeit, den Verlängerungspreis und die Zahlungsmethode. Bestätige die Bestellung selbst. [Bestellanleitung](https://docs.onnetwork.agency/domains/)
+3. Für eine Subdomain folge Abschnitt 6. Für die Hauptdomain kläre beim Anbieter die Delegation auf die Nameserver deines eigenen Cloudflare-Kontos und folge Abschnitt 5.
 
 ## 5. Hauptdomain mit externem Registrar verbinden
 
