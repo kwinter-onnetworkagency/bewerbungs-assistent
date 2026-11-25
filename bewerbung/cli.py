@@ -9,6 +9,7 @@ import sys
 from . import __version__
 from .core import NOTE_TYPES, Workspace, validate_profile, write, keyword_match, search_queries
 from .documents import render
+from .gehalt import marktwert
 from .export import report, chat_bundle
 from .setup import initialize, wizard, ASSISTANTS
 from .interview import interview
@@ -67,6 +68,12 @@ def parser():
     note.add_argument("--beleg", help="Privaten Quellbeleg sichern")
     note.add_argument("--datum", help="Frist oder Gesprächsdatum (JJJJ-MM-TT)")
     note.add_argument("--erledigt", action="store_true")
+    market = commands.add_parser("gehaltswert", help="Exakten belegten Marktwert vergleichen")
+    market.add_argument("id")
+    for field in ("titel", "quelle", "beruf", "region", "basis", "wert", "waehrung", "datenstand"):
+        market.add_argument("--" + field, required=True)
+    market.add_argument("--zeitraum", choices=["Monat", "Jahr", "Stunde"], required=True)
+    market.add_argument("--kennzahl", choices=["Median", "Durchschnitt", "Q25", "Q75"], required=True)
     cv = commands.add_parser("lebenslauf", help="Einfachen DOCX-Lebenslauf aus belegten Fakten erstellen")
     cv.add_argument("--pdf", action="store_true")
     letter = commands.add_parser("anschreiben", help="Gespeicherten Entwurf als DOCX erstellen")
@@ -152,6 +159,10 @@ def main(argv=None):
             print(path)
             if a.pdf:
                 print(convert_pdf(path))
+        elif a.command == "gehaltswert":
+            marktwert(w, a.id, a.titel, a.quelle, a.beruf, a.region, a.basis, a.zeitraum,
+                      a.kennzahl, a.wert, a.waehrung, a.datenstand)
+            print("Marktvergleich gespeichert.")
         elif a.command == "notiz":
             w.add_note(a.id, a.art, a.titel, Path(a.textdatei).read_text(encoding="utf-8-sig"),
                        a.quelle, a.datum, a.erledigt, a.beleg)

@@ -41,3 +41,11 @@ python3 start.py bericht
 ```
 
 Für eine schriftlich belegte Gehaltsspanne verwende `arbeitgeberband`. Beträge gehören zusammen mit ihrer Bezugsbasis in den Text. Nutze einen belegten Direktlink oder den privaten Nachweis mit `--beleg DATEI`. Wiederhole `--quelle` für weitere URLs. Ergänze `--datum JJJJ-MM-TT` für eine belegte Frist oder einen Termin. Eine Aufgabe lässt sich mit gleichem Titel und `--erledigt` abschließen. Beim Wechsel auf Windows ist der lokale Interpreter meist `python`. Ohne lokale Schreibmöglichkeit gib die Mappe und die Änderungen direkt im Chat zur Prüfung zurück.
+
+Exakte Vergleichswerte kann der Assistent über `gehaltswert` strukturiert erfassen. Beispiel mit fiktiven Daten:
+
+```sh
+python3 start.py gehaltswert STELLEN-ID --titel "Beispielquelle" --quelle https://example.org/markt --beruf Einkauf --region Sachsen --basis Vollzeit --kennzahl Median --zeitraum Monat --wert 4000 --waehrung EUR --datenstand "2025, fiktiv"
+```
+
+Die Originaleinheit bleibt sichtbar. Monatswerte erhalten zusätzlich eine gekennzeichnete Jahreshochrechnung. Für gedeckelte Angaben wie „größer als“ oder fehlende Werte verwende eine Textnotiz, damit die Aussage der Quelle erhalten bleibt.

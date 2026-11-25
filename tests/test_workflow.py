@@ -30,6 +30,19 @@ class WorkflowTest(unittest.TestCase):
         self.proof = self.base / "nachweis.txt"
         self.proof.write_text("Fiktiver Testbeleg: Absage zur Stelle aaa", encoding="utf-8")
 
+    def test_salary_values_retain_source_period_statistic_and_history(self):
+        from bewerbung.gehalt import marktwert
+        args = (self.w, self.jid, "Beispiel", "https://example.org/markt", "Einkauf",
+                "Sachsen", "Vollzeit", "Monat", "Median")
+        marktwert(*args, "4000,50", "EUR", "2025")
+        note = self.w.jobs()[0]["notes"][0]
+        self.assertEqual(note["kind"], "marktvergleich")
+        self.assertIn("4 000,50 EUR brutto pro Monat", note["content"])
+        self.assertIn("48 006,00 EUR", note["content"])
+        with self.assertRaises(ValueError):
+            marktwert(*args, ">4000", "EUR", "2025")
+        self.assertEqual(len(self.w.jobs()[0]["notes"]), 1)
+
     def test_dashboard_keeps_rounds_sources_and_real_status(self):
         from bewerbung.core import search_queries
         from urllib.parse import parse_qs, urlsplit

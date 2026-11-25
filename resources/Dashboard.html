@@ -558,7 +558,11 @@
               ),
             );
           if (!active.length) root.append(empty("Keine Gespräche oder Angebote mit aktivem Status."));
-          root.append(el("h2", "Zuletzt erfasste Rückmeldungen"));
+          root.append(el("h2", "Vorbereitete Bewerbungen"));
+          const ready = jobs.filter((j) => j.status === "vorbereitet");
+          for (const j of ready) root.append(row(j, "Unterlagen und dokumentierte Prüfung ansehen"));
+          if (!ready.length) root.append(empty("Keine Bewerbungen zum Versand vorbereitet."));
+          root.append(el("h2", "Zuletzt erfasste Ereignisse"));
           const recent = jobs
             .flatMap((j) => (j.events || []).map((e) => ({ j, e })))
             .sort((a, b) => b.e.recorded_at.localeCompare(a.e.recorded_at))
@@ -605,7 +609,8 @@
                   .join(", ")
               : [
                   s,
-                  ns.find((n) => n.kind === "arbeitgeberband")?.title || "Arbeitgeberband offen",
+                  ns.find((n) => n.kind === "arbeitgeberband")?.content?.split("\n")[0] ||
+                    "Arbeitgeberband offen",
                   j.score_reason,
                 ]
                   .filter(Boolean)
