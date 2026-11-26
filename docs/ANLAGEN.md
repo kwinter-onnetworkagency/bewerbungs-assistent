@@ -76,3 +76,5 @@ python start.py paketzuordnung STELLEN_ID FASSUNG --ereignis 1 --grund "Dateien 
 ```
 
 Der Assistent prüft Paket und Einreichungsbeleg erneut. Deine Bestätigung wird am bestehenden Ereignis mit Zeitstempel gespeichert. Mit den optionalen Angaben `--vorlage`, `--vorlagenversion` und `--kanal` erfasst du die beim Versand belegte Gestaltung und den tatsächlichen Einreichungsweg für die Kohortenauswertung. Eine erst nach der Einreichung erzeugte Fassung lässt sich ihr nicht zuordnen. Eigene Unterlagen und deren Kopien sind als Einreichungsbeleg ungeeignet. Eine bereits zugeordnete Fassung bleibt erhalten. Paketbau und Paketprüfung lösen weder Versand noch Statuswechsel aus.
+
+Bei einer vorliegenden Original-EML vergleicht der Assistent die Prüfsummen sämtlicher angehängter PDFs mit der Paketfassung. Stimmen sie vollständig überein, erscheint die Zuordnung als `anhang_hash`. Andernfalls wird die ausdrücklich bestätigte Zuordnung als `nutzerzuordnung` geführt. Das gilt auch bei einem Portalbeleg.

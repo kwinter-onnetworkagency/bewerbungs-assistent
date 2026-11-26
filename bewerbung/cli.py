@@ -8,7 +8,7 @@ import sys
 from . import __version__
 from .core import NOTE_TYPES, Workspace, validate_profile, write, keyword_match, search_queries
 from .documents import convert_pdf, office_binary
-from . import anlagen, applemail, mailstand, persona, portal, recherche, unterlagentext, termine
+from . import anlagen, applemail, mailstand, persona, portal, profilvergleich, recherche, unterlagentext, termine
 from .gehalt import marktwert
 from .export import report, chat_bundle
 from .setup import initialize, wizard, ASSISTANTS
@@ -82,11 +82,12 @@ def parser():
         market.add_argument("--" + field, required=True)
     market.add_argument("--zeitraum", choices=["Monat", "Jahr", "Stunde"], required=True)
     market.add_argument("--kennzahl", choices=["Median", "Durchschnitt", "Q25", "Q75"], required=True)
-    for module in (anlagen, applemail, mailstand, persona, portal, recherche, unterlagentext, termine):
+    for module in (anlagen, applemail, mailstand, persona, portal, profilvergleich, recherche, unterlagentext, termine):
         module.register(commands)
     commands.add_parser("bericht", help="Markdown-Übersicht und CSV-Tabelle erzeugen")
     chat = commands.add_parser("chat-export", help="Vier selbst zu prüfende Dateien für ein privates Chat-Projekt bündeln")
     chat.add_argument("--mit-kontakt", action="store_true", help="Private Kontakt- und Mailangaben ausdrücklich aufnehmen")
+    chat.add_argument("--mit-verlauf", action="store_true", help="Anzeigen, Ereignisdaten, Screening-, Aufgaben- und Gesprächsnotizen ausdrücklich mitnehmen")
     chat.add_argument("--mit-gehalt", action="store_true", help="Persönliche Gehaltspräferenz ausdrücklich aufnehmen")
     routine = commands.add_parser("routine", help="Vorlagen für vom Nutzer einzurichtende Routinen anzeigen")
     routine.add_argument("art", choices=["stellensuche", "rueckmeldungen"])
@@ -147,10 +148,10 @@ def main(argv=None):
             print("Deine beiden Prüfschritte dokumentiert; nicht automatisch als bestanden geprüft.")
         elif a.command == "ereignis":
             changed = w.record(a.id, a.status, a.beleg, a.datum, a.grund, a.message_id)
-            print("Ereignis erfasst." if changed else "Message-ID bereits erfasst, unverändert.")
+            print("Ereignis erfasst." if changed else "Ereignis bereits erfasst, unverändert.")
         elif a.command in anlagen.COMMANDS:
             anlagen.run(a, w)
-        elif any(module.run(a, w) for module in (applemail, mailstand, persona, portal, recherche, unterlagentext, termine)):
+        elif any(module.run(a, w) for module in (applemail, mailstand, persona, portal, profilvergleich, recherche, unterlagentext, termine)):
             pass
         elif a.command == "gehaltswert":
             marktwert(w, a.id, a.titel, a.quelle, a.beruf, a.region, a.basis, a.zeitraum,
@@ -164,7 +165,7 @@ def main(argv=None):
             print(report(w))
             print(w.path("exports", "Dashboard.html"))
         elif a.command == "chat-export":
-            print(chat_bundle(w, contact=a.mit_kontakt, salary=a.mit_gehalt))
+            print(chat_bundle(w, contact=a.mit_kontakt, salary=a.mit_gehalt, details=a.mit_verlauf))
             print("Enthält dein Profil. Lokal entpacken, Dateien prüfen und einzeln in dein privates Projekt hochladen.")
         elif a.command == "routine":
             filename = "STELLENSUCHE.txt" if a.art == "stellensuche" else "RUECKMELDUNGEN.txt"

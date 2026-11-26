@@ -47,3 +47,5 @@ Zeige eine kompakte Zusammenfassung: belegte Fakten, Nutzerangaben, offene Frage
 ## Lokale Alternative ohne KI-Zugang
 
 `python start.py interview` führt ein speicherbares Interview mit 24 Fragen durch. `/pause` sichert den Stand, Eingabetaste lässt eine Angabe offen. Am Ende wird das Profil erst nach Bestätigung übernommen. Dieser Fragebogen stellt keine dynamischen Rückfragen und liest keine Lebensläufe; das persönliche Gespräch im Assistenten kann beides mit den dort verfügbaren Werkzeugen ergänzen.
+
+Stimme bei Interesse das berufliche Netzwerkprofil separat ab. Frage nach ausgewählten Fakten, vorhandenen Profiltexten, Sprache und den Abschnitten, die sich ändern sollen. Mit `/linkedin` können auch persönliche Empfehlungen vorbereitet und nachgehalten werden.

@@ -117,3 +117,14 @@ class MailTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "kein Versandbeleg"):
             self.w.record(self.j, "beworben", copied, "2026-02-10", "Versuch einer falschen Zuordnung")
         self.assertEqual(set(self.w.path("belege").iterdir()), previous)
+
+    def test_midnight_reconciliation_and_portal_marker(self):
+        self.capture("ungeklaert", "--empfangen", "2026-02-11T00:01:00+00:00")
+        self.capture("eingang", "--stelle", self.j)
+        event = self.w.jobs()[0]["events"][0]
+        self.assertEqual(event["occurred_on"], "2026-02-11")
+        self.assertTrue(event["mail"]["header_date"].startswith("2026-02-10"))
+        archive = self.file.parent / "quittung.json"
+        archive.write_text('{ "dateien": [], "typ" : "portal_vorbereitung" }', encoding="utf8")
+        with self.assertRaisesRegex(ValueError, "kein Versandbeleg"):
+            self.w.record(self.j, "beworben", archive, "2026-02-11", "Eigener Uploadbericht")

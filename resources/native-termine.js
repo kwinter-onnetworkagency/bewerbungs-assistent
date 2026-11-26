@@ -159,7 +159,17 @@ function run() {
   const raw = $.NSFileHandle.fileHandleWithStandardInput.readDataToEndOfFile;
   const q = JSON.parse(ObjC.unwrap($.NSString.alloc.initWithDataEncoding(raw,$.NSUTF8StringEncoding)));
   if (!['event','contact'].includes(q.kind)) throw Error('Unbekannter nativer Auftrag.');
-  return JSON.stringify(synchronize(q, q.kind === 'event' ? calendarStore(q) : contactsStore(q)));
+  let writeStarted=false;
+  try {
+    const store=q.kind === 'event' ? calendarStore(q) : contactsStore(q);
+    const result=synchronize(q,{
+      find:store.find,create(){writeStarted=true;return store.create();},
+      update(id){writeStarted=true;return store.update(id);},
+    });
+    return JSON.stringify(result);
+  } catch(error) {
+    return JSON.stringify({verified:false,write_started:writeStarted,reason:String(error.message || 'Native Prüfung fehlgeschlagen.')});
+  }
 }
 
 if (typeof module !== 'undefined') module.exports={synchronize};

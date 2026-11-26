@@ -310,6 +310,13 @@ def sync_native(args, w, job, path):
     if child.returncode:
         raise ValueError('Native Übernahme offen. ' + child.stderr.strip()[:600])
     reply = json.loads(child.stdout)
+    if isinstance(reply, dict) and reply.get('verified') is False and reply.get('write_started') is False:
+        state.pop('pending', None)
+        if state.get('native_id'):
+            write(statefile, state)
+        else:
+            statefile.unlink()
+        raise ValueError('Native Vorprüfung abgebrochen: ' + str(reply.get('reason', 'Ziel oder Berechtigung prüfen.'))[:500])
     if not isinstance(reply, dict) or reply.get('verified') is not True or not isinstance(reply.get('id'), str) or not reply['id']:
         raise ValueError('Rücklesen fehlgeschlagen. Ursprüngliche Übernahme vor einem neuen Eintrag prüfen.')
     write(statefile, {'native_id': reply['id'], 'calendar': request.get('calendar'), 'fingerprint': fingerprint,

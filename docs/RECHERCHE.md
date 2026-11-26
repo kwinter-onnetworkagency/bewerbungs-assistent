@@ -92,3 +92,32 @@ python start.py anzeigenstand JOB-ID --zustand offen --quelle https://example.or
 Die ausdrückliche Übernahme ersetzt den aktuellen Anzeigentext, archiviert den vorigen und hebt eine frühere Prüfung auf. Für die reine Beobachtung lässt du `--uebernehmen` weg.
 
 Stellen- und Bewerbungslinks werden bei bekannten URL-Mustern über Anbieter, Arbeitgeber und Stellenkennung zusammengeführt. Das umfasst Ashby-UUIDs, Workday-Requisitionsnummern, numerische SmartRecruiters-Kennungen sowie die Stellen- und Formularansicht desselben Recruitee-Slugs. Neue Recruitee-Slugs oder eigene Arbeitgeberdomains benötigen bei fehlender gemeinsamer Kennung die geprüfte Firmenreferenz. [Ashby Job Posting](https://developers.ashbyhq.com/reference/jobpostinglist) · [SmartRecruiters Job Postings](https://developers.smartrecruiters.com/docs/get-job-postings) · [Recruitee-Formularadressen](https://support.recruitee.com/en/articles/1066259-create-an-application-form-for-each-job)
+
+## Wöchentliche Suche mit Gehaltsvergleich und Dashboard
+
+Im persönlichen Arbeitsordner kombiniert `wochenlauf` die Suche mit Volltextabruf, bestätigten Funden, Passung, passenden BA-Gehaltsclustern und aktualisiertem Dashboard. Ein Zeitplan kann denselben Befehl ausführen. Gib Suchbegriffe, Orte, Arbeitgeber-Boards und die optionalen Quellen so an wie bei `suchlauf`.
+
+Speichere die folgende Struktur als `wochenplan.json`. Für einen ersten Lauf kannst du beide Listen leer lassen. Das Beispiel zeigt die Form einer Freigabe und eines Gehaltsclusters. Ersetze die URL, die Firma, den relativen Pfad zum selbst gelesenen Volltext, das Sichtungsdatum und die Klassifikation durch geprüfte Werte. Der Regionsschlüssel gilt für den gewählten Vergleichsmarkt.
+
+```json
+{
+  "bestaetigt": [
+    {"url": "https://example.org/karriere/disposition", "firma": "Beispielbetrieb", "textdatei": "anzeige.txt", "gesehen_am": "2025-03-12"}
+  ],
+  "gehaltscluster": [
+    {"titelbegriffe": ["Disposition"], "kldb": "51622", "region": 1, "niveau": 2}
+  ]
+}
+```
+
+```sh
+python start.py wochenlauf --plan wochenplan.json --begriff "Disposition" --ort Leipzig --greenhouse BOARD
+```
+
+Ein neuer Fund benötigt den persönlich bestätigten Originaltext. Bei bekannten Stellen kann der Lauf einen erneut gelieferten unveränderten Volltext mit dem gespeicherten Original vergleichen. Abweichungen und ungesichtete Funde bleiben als offene Sichtungen im Bericht. Ändert sich eine bekannte Anzeige, kannst du die neue Fassung mit `anzeigenstand` ausdrücklich übernehmen. Nach der Sichtung lässt sich derselbe Suchbericht weiterverarbeiten; ersetze den Dateinamen durch die Ausgabe des ersten Laufs.
+
+```sh
+python start.py wochenlauf --plan wochenplan.json --bericht Suchlauf-20250312T103000000000Z.json
+```
+
+Die Datei `exports/Wochenlauf-…json` enthält den verwendeten Suchbericht, Quellenabdeckung, offene Treffer, bestätigte Stellen mit Passung und separat die BA-Vergleichswerte. Jeder passende Cluster wird pro Lauf einmal abgerufen. Unterdrückte Werte, leere Ergebnisse und Zugangsfehler bleiben erkennbar. Das Dashboard zeigt die gespeicherten Stellen und Marktvergleiche. Eine gesichtete Stelle erhält durch den Wochenlauf keinen Versandstatus.

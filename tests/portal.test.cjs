@@ -3,6 +3,7 @@ const {test, before, after} = require('node:test');
 const assert = require('node:assert/strict');
 const {createServer} = require('node:http');
 const {createHash} = require('node:crypto');
+const {execFileSync}=require('node:child_process');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -83,28 +84,31 @@ test('Feldbericht erfasst Hauptseite und eingebettetes Formular ohne Feldwerte',
   await prepare(config,context);
   const census = read('felder.json');
   assert.equal(census.fields[0].id,'hauptseite');
-  const embedded = census.frames.find(f=>f.url === origin+'/eingebettet');
-  assert.ok(embedded.fields.some(f=>f.id === 'vorname' && f.vorschlag === 'vorname' && !('value' in f)));
+  const embedded = census.frames.find(f=>f.url.startsWith(origin+'/… #'));
+  assert.ok(embedded.fields.some(f=>f.id === 'vorname' && f.selektor === '#vorname' && f.vorschlag === 'vorname' && !('value' in f)));
   assert.equal(submissions.length,0);
 });
 
 test('Einzelquittungen im richtigen Frame bestätigen Namen und die übertragenen Bytes', async t => {
   const {config, context, file, read} = await setup(t);
   const names = ['Vita (DE)+.pdf', 'Zeugnis.pdf'];
-  Object.assign(config,{url:origin+'/rahmenstelle', frame:origin+'/eingebettet', personal:{vorname:'Test'},
+  Object.assign(config,{url:origin+'/rahmenstelle', frame:origin+'/eingebettet', fields:[{selector:'#vorname',value:'Test',key:'stammdaten:vorname'}],
     uploads:[{selector:'#slot', receipt:'.quittung', files:names.map(file)}]});
   const page = await prepare(config,context);
   assert.equal(await page.frameLocator('iframe').locator('#vorname').inputValue(),'Test');
   assert.equal(await page.locator('#hauptseite').inputValue(),'');
   assert.deepEqual(uploads, names.map(name=>({name, data:'%PDF-1.4 Testdatei '+name})));
-  assert.deepEqual(read('uploads.json').dateien.map(x=>x.status), names.map(()=>'Datei im Portal quittiert'));
+  const report = read('uploads.json');
+  assert.equal(report.typ,'portal_vorbereitung');
+  assert.ok(report.dateien.every(x=>x.typ === 'portal_vorbereitung'));
+  assert.deepEqual(report.dateien.map(x=>x.status), names.map(()=>'Datei im Portal quittiert'));
   assert.deepEqual(submissions, []);
 });
 
 test('Mehrfachfeld ohne Quittung hält die Auswahl offen und stoppt vor dem Versand', async t => {
   const {config, context, file, read} = await setup(t);
   const names = ['A.pdf','B.pdf'];
-  Object.assign(config,{personal:{vorname:'Beispiel'}, uploads:[{selector:'#multi', files:names.map(file)}]});
+  Object.assign(config,{fields:[{selector:'#vorname',value:'Beispiel',key:'stammdaten:vorname'}], uploads:[{selector:'#multi', files:names.map(file)}]});
   const page = await prepare(config, context);
   assert.deepEqual(await page.locator('#multi').evaluate(n=>Array.from(n.files,f=>f.name)), names);
   assert.deepEqual(read('uploads.json').dateien.map(x=>x.status), names.map(()=>'nur ausgewählt, Upload offen'));
@@ -119,6 +123,8 @@ test('Abgewiesene zweite Datei lässt den ersten Beleg und die offene dritte Dat
   await assert.rejects(prepare(config, context), /Timeout/);
   assert.deepEqual(read('uploads.json').dateien.map(x=>x.status),
     ['Datei im Portal quittiert','Auswahl begonnen, Upload offen','offen']);
+  assert.equal(read('uploads.json').typ,'portal_vorbereitung');
+  assert.ok(read('uploads.json').dateien.every(x=>x.typ === 'portal_vorbereitung'));
   assert.deepEqual(uploads.map(x=>x.name),names.slice(0,2));
   assert.deepEqual(submissions, []);
 });
@@ -140,4 +146,68 @@ test('Abweichender Hash stoppt vor der ersten Auswahl und ein belegtes Feld blei
   await assert.rejects(prepare(other.config,other.context), /bereits vorhanden/);
   assert.deepEqual(uploads,[]);
   assert.deepEqual(submissions,[]);
+});
+
+
+test('Notfall-, Referenz-, Gehalts- und Startfelder benötigen explizite Zuordnung', async t => {
+  const {config,context,read}=await setup(t);
+  const html=`<form><label>E-Mail <input id="eigene-mail" autocomplete="email"></label>
+    <fieldset><legend>Notfallkontakt</legend><label>E-Mail <input id="emergency" autocomplete="email"></label></fieldset>
+    <label>Telefon der Referenz <input id="telefon" autocomplete="tel"></label>
+    <label>Gehalt <input id="gehalt"></label><label>Start <input id="eintritt"></label></form>`;
+  await context.route('**/direkt',route=>route.fulfill({contentType:'text/html',body:html}));
+  Object.assign(config,{personal:{email:'kontakt@example.org',telefon:'555',gehalt:'VERTRAULICH',start:'DATUM'},
+    fields:[{selector:'#eintritt',value:'Manuell freigegeben'}]});
+  const page=await prepare(config,context);
+  assert.equal(await page.locator('#eigene-mail').inputValue(),'');
+  for (const id of ['emergency','telefon','gehalt']) assert.equal(await page.locator('#'+id).inputValue(),'');
+  assert.equal(await page.locator('#eintritt').inputValue(),'Manuell freigegeben');
+  const log=read('befuellte-felder.json');
+  assert.equal(log.typ,'portal_vorbereitung');
+  assert.deepEqual(log.felder,[{selektor:'#eintritt',schluessel:'explizit'}]);
+  assert.ok(!JSON.stringify(log).includes('kontakt@example.org'));
+});
+
+test('Berichte entfernen Token aus Pfad, Query und Fragment und schützen Screenshots',async t=>{
+  const {config,context,read}=await setup(t);
+  Object.assign(config,{mode:'erkunden',url:origin+'/ticket/PrivatPfad?token=PrivatQuery#PrivatFragment'});
+  await context.route('**/ticket/**',r=>r.fulfill({contentType:'text/html',body:'<iframe src="/PrivatFrame?code=PrivatCode"></iframe>'}));
+  await prepare(config,context);
+  const report=JSON.stringify(read('felder.json'));
+  assert.ok(report.includes(origin));
+  for(const secret of ['PrivatPfad','PrivatQuery','PrivatFragment','PrivatFrame','PrivatCode']) assert.ok(!report.includes(secret));
+  if(process.platform!=='win32') assert.equal(fs.statSync(path.join(config.output,'vorschau.png')).mode & 0o777,0o600);
+});
+
+test('Erkunden, Selektor bestätigen und ausschließlich dessen Fakten- oder Stammdatenwert eintragen',async t=>{
+  const first=await setup(t), second=await setup(t);
+  const body=`<h3>Wer hat Sie empfohlen?</h3><label>E-Mail<input id="fremd" autocomplete="email"></label>
+    <h3>Ihre Angaben</h3><input id="meins" type="email"><textarea id="praxis"></textarea>`;
+  for(const helper of [first,second]) {
+    await helper.context.route('**/direkt',route=>route.fulfill({contentType:'text/html',body}));
+  }
+  first.config.mode='erkunden';
+  await prepare(first.config,first.context);
+  const census=first.read('felder.json');
+  assert.equal(census.fields.find(f=>f.selektor==='#fremd').vorschlag,'email');
+  const personal={email:'kontakt@example.org',telefon:'nicht-freigegeben'};
+  function resolve(fields) {
+    const code=`import json,sys
+from bewerbung.portal import selected_fields
+class W:
+ def profile(self):return {"facts":[{"id":"kenntnis","text":"Geprüfter Fakt"}]}
+print(json.dumps(selected_fields(json.load(sys.stdin),W())))`;
+    return JSON.parse(execFileSync(process.env.PYTHON || (process.platform === 'win32'?'python':'python3'),['-c',code],
+      {cwd:path.join(__dirname,'..'),encoding:'utf8',stdio:['pipe','pipe','pipe'],input:JSON.stringify({stammdaten:personal,felder:fields})}));
+  }
+  assert.deepEqual(resolve({}),[]);
+  assert.throws(()=>resolve({'#meins':{stammdaten:'fehlt'}}));
+  const bySelector=Object.fromEntries(census.fields.map(f=>[f.id,f.selektor]));
+  second.config.fields=resolve({[bySelector.meins]:{stammdaten:'email'},[bySelector.praxis]:{fakt:'kenntnis'}});
+  const page=await prepare(second.config,second.context);
+  assert.equal(await page.locator('#fremd').inputValue(),'');
+  assert.equal(await page.locator('#meins').inputValue(),personal.email);
+  assert.equal(await page.locator('#praxis').inputValue(),'Geprüfter Fakt');
+  assert.deepEqual(second.read('befuellte-felder.json').felder,[
+    {selektor:'#meins',schluessel:'stammdaten:email'},{selektor:'#praxis',schluessel:'fakt:kenntnis'}]);
 });

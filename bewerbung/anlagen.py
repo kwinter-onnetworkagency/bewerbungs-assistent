@@ -333,11 +333,18 @@ def associate(workspace, jid, version, index, reason, *, vorlage=None, vorlagenv
         created = datetime.fromisoformat(manifest["erstellt"])
         recorded = datetime.fromisoformat(event["recorded_at"])
         mail_date = event.get("mail", {}).get("mail_at")
-        if (created > recorded or created.astimezone().date().isoformat() > event["occurred_on"]
-                or (mail_date and created > datetime.fromisoformat(mail_date))):
+        if mail_date:
+            # Das Maildatum enthält seinen UTC-Versatz und ist sekundengenau.
+            after_submission = created.replace(microsecond=0) > datetime.fromisoformat(mail_date)
+        else:
+            after_submission = created.astimezone().date().isoformat() > event["occurred_on"]
+        if created > recorded or after_submission:
             raise ValueError("Die Fassung entstand nach der belegten Einreichung.")
         attributes = {name: text(value, name, 200) for name, value in
                       (("vorlage", vorlage), ("vorlagenversion", vorlagenversion), ("kanal", kanal)) if value is not None}
+        previous = event.get("eingereichtes_paket")
+        if previous and (previous["fassung"] != version or any(previous.get(k) != v for k, v in attributes.items())):
+            raise ValueError("Diesem Ereignis ist bereits eine andere Fassung zugeordnet.")
         assignment = "nutzerzuordnung"
         original = (event.get("mail") or {}).get("original") or proof
         eml = workspace.path(original["file"])
@@ -346,17 +353,19 @@ def associate(workspace, jid, version, index, reason, *, vorlage=None, vorlagenv
                 raise ValueError("Das zugeordnete Mailoriginal fehlt oder wurde verändert.")
             message = BytesParser(policy=policy.default).parsebytes(eml.read_bytes())
             attachments = []
-            for part in message.walk():
+            for part in message.iter_attachments():
                 if (part.get_filename() or part.get_content_disposition() == "attachment") and not part.is_multipart():
                     data = part.get_payload(decode=True)
                     if data is not None and (part.get_content_type() == "application/pdf" or data.startswith(b"%PDF-")):
                         attachments.append(hashlib.sha256(data).hexdigest())
-            if Counter(attachments) == Counter(row["sha256"] for row in manifest["dateien"]):
+            if attachments:
+                if Counter(attachments) != Counter(row["sha256"] for row in manifest["dateien"]):
+                    raise ValueError("PDF-Anhänge der E-Mail weichen vom Paket ab. Einen passenden Einreichungsbeleg prüfen.")
                 assignment = "anhang_hash"
-        previous = event.get("eingereichtes_paket")
         if previous:
-            if previous["fassung"] != version or any(previous.get(k) != v for k, v in attributes.items()):
-                raise ValueError("Diesem Ereignis ist bereits eine andere Fassung zugeordnet.")
+            if assignment == "anhang_hash" and previous.get("zuordnung") != assignment:
+                previous.update(zuordnung=assignment, hashpruefung=now())
+                write(workspace.path("bewerbungen.json"), jobs)
             return
         event["eingereichtes_paket"] = dict(fassung=version, grund=reason, erfasst=now(), zuordnung=assignment, **attributes)
         write(workspace.path("bewerbungen.json"), jobs)

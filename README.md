@@ -39,6 +39,8 @@ Wähle deinen Assistenten, gib deinen Namen ein und wähle einen neuen privaten 
 
 Beispiel für die zweite Nachricht nach dem Interview: „/stellensuche Prüfe die beiden beigefügten Anzeigen anhand meiner Muss-Kriterien.“ [Einrichtung je Assistent](docs/INSTALLATION.md)
 
+Für eine vollständige Bewerbung genügt nach dem Interview ein Auftrag wie „/bewerbung Bereite die Unterlagen für diese Stellenanzeige vor.“ Der Assistent führt dich durch Lebenslauf, Anschreiben, Nachweise und Paketprüfung. Bei mehreren Stellen braucht er die konkrete Stellen-ID oder URL.
+
 ## Vom Stellenfund zum Vorstellungsgespräch
 
 Mit `/stellensuche` recherchierst du auch bei Indeed und der Bundesagentur für Arbeit. Mit `/gehalt` vergleichst du den Gehaltsrahmen der konkreten Stelle mit passenden Marktwerten. Nach einer Einladung erstellt `/gespraech` eine Mappe für deine Runde und übt das Gespräch mit dir.
@@ -79,5 +81,7 @@ python3 scripts/smoke.py
 ```
 
 Die CI prüft Linux, Windows und macOS. Eine Anmeldung in fremden ChatGPT-/Claude-Konten oder der echte Versand einer Bewerbung gehören nicht zu diesen Tests. Projektaufbau: [ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+Im [Funktionsverzeichnis](docs/FUNKTIONSUMFANG.md) findest du alle Kurzbefehle mit ihren lokalen Werkzeugen und Voraussetzungen.
 
 Lizenz: [MIT](LICENSE).

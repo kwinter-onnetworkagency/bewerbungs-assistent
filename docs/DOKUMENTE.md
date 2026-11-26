@@ -12,6 +12,13 @@ python start.py lebenslauf --stelle STELLEN_ID --sprache en --pdf
 
 Der erste Aufruf verwendet alle Profilfakten. Mit einer Stellen-ID erscheinen Zielrolle und Firma als Zielposition. Innerhalb jedes Abschnitts stehen zuerst Fakten, deren Stichwörter in der gespeicherten Anzeige vorkommen. Bei einer ausdrücklichen Auswahl mit `--fakt` bestimmen die genannten IDs Inhalt und Reihenfolge innerhalb ihrer Abschnitte. Stelle und Anzeige liefern keine neuen Qualifikationen. Persönliche Suchbedingungen und Belegpfade bleiben im Arbeitsordner.
 
+Für eine thematische Auswahl verwendest du `--tag` mit den Stichwörtern aus `fakt --stichwort` beziehungsweise dem Feld `keywords`. Speichere jede unabhängig auswählbare Aussage oder jeden Aufzählungspunkt als eigenen belegten Fakt. Dann kann zum Beispiel ein Projekt für Planung erscheinen, während eine andere Leistung aus derselben Station entfällt. Mehrere Tags verwenden eine Oder-Auswahl. Mehr übereinstimmende Stichwörter geben Vorrang, bei Gleichstand zählt die Profilreihenfolge. Die Abschnitte behalten ihre fachliche Reihenfolge. `--max-fakten` begrenzt die Gesamtauswahl. Wenn kein Tag passt, nennt der Assistent den fehlenden Treffer.
+
+```sh
+python start.py lebenslauf --stelle STELLEN_ID --tag Projektplanung --tag Auswertung --max-fakten 6
+python start.py textpruefung lebenslauf --stelle STELLEN_ID --tag Projektplanung --tag Auswertung --max-fakten 6
+```
+
 Im privaten `profil.json` kann ein belegter Fakt eine eigene Übersetzung tragen. Ein fiktives Beispiel für einen Eintrag in `facts` ist
 
 ```json
@@ -76,3 +83,20 @@ Der lokale Lesetest für Bewerbermanagementsysteme (ATS) liest den Text aus der 
 Für DOCX ohne Bild genügt Python. Der PDF-Export benötigt lokal LibreOffice. Zum Lesen der PDF müssen `pdftotext` und `pdfinfo` aus Poppler im Suchpfad liegen. Für eine Fassung mit Foto oder Unterschrift bestätigt `pdfimages` die Präsenz eines Bildobjekts. Die DOCX-Prüfung vergleicht zusätzlich die eingebetteten Bilddaten mit der gewählten Eingabedatei. Gib beim Prüfen dieselben Layout-, Bild- und Umbruchoptionen an. Ob das Bild korrekt positioniert und erkennbar ist, prüfst du in der fertigen PDF. Ein Word-Export muss die Dokumenteigenschaften mitführen. Scans ohne Textebene, alte unstrukturierte Fassungen und nachträglich bearbeitete Dateien können den Lesetest verfehlen. Bei geändertem Profil oder Entwurf prüft der Befehl gegen den heutigen Datenstand. Historische Unterlagen bleiben erhalten.
 
 Lies die fertigen Dateien selbst und öffne die PDF zur Layoutkontrolle. Halte deine beiden tatsächlichen Prüfungen mit `python start.py pruefung STELLEN_ID --inhalt "…" --dokument "…"` fest. Ein lokaler Lesetest bestätigt weder die Verarbeitung durch ein konkretes Portal noch die inhaltliche Richtigkeit eines Entwurfs.
+
+
+## Eigene Entwürfe und DOCX-Eigenschaften bereinigen
+
+```sh
+python start.py entwurf-bereinigen STELLEN_ID
+python start.py docx-bereinigen anschreiben dokumente/STELLEN_ID-anschreiben.docx --stelle STELLEN_ID
+python start.py docx-bereinigen lebenslauf dokumente/lebenslauf.docx --ohne-autor
+```
+
+Der erste Befehl schreibt den aktuell gespeicherten eigenen Briefentwurf in eine neue UTF-8-Textdatei unter `dokumente/`. Er entfernt weiche Trennzeichen, unsichtbare Leerzeichen, Wortverbinder und BOM-Zeichen. Er vereinheitlicht Tabulatoren, Leerzeichenvarianten und Zeilenenden. Sichtbare Aussagen, Absätze und sprachlich bedeutsame Verbindungszeichen bleiben erhalten. Lies die Datei und übernimm sie bei Bedarf mit `entwurf STELLEN_ID --textdatei PFAD --fakt FAKTEN_ID` als neue Entwurfsfassung.
+
+Der DOCX-Befehl erzeugt eine neue Kopie. Gib dieselben Profil-, Sprach-, Bild- und Layoutoptionen wie beim Rendern an. Bei einer automatisch kompakt gesetzten Fassung gehört `--kompakt` dazu. Das Programm rekonstruiert die Unterlage aus den eigenen aktuellen Angaben und vergleicht Hauptdokument, Medien und Beziehungen mit der ausgewählten Datei aus `dokumente/`. Bei abweichendem Inhalt oder zusätzlichen Bestandteilen wie Signaturen bricht es ab. Zeugnisse, Originalbelege und fremde Dokumente bleiben in ihrer ursprünglichen Form.
+
+Aus der kontrollierten Kopie entfernt der Assistent den letzten Bearbeiternamen, die Revisionsnummer und das letzte Druckdatum sowie vorhandene technische Angaben zu Firma, Leitung, Bearbeitungsdauer, Vorlage und Programmversion. Standardmäßig bleiben dein Autorname, der Stellenbetreff sowie Rechte- und Herkunftsangaben erhalten. Mit `--ohne-autor` kannst du zusätzlich deinen eigenen Namen im Office-Autorenfeld entfernen. Der sichtbare Dokumenttext ändert sich dabei nicht. Eine bereits auf andere Weise umformatierte oder neu gespeicherte Datei kann vom Originalaufbau abweichen. Erzeuge in diesem Fall aus deinen aktuellen Quellen eine neue Fassung.
+
+Für den gesamten Ablauf im Assistenten nutze `/bewerbung` mit der konkreten Stelle. Damit lassen sich Dokumentauswahl, Prüfung und Anlagenpaket gemeinsam vorbereiten.

@@ -351,14 +351,19 @@ def atlas(kldb, region, level):
 
 def register(commands):
     find = commands.add_parser("suchlauf", help="BA und gewählte Greenhouse-Boards abrufen, Indeed-Funde einlesen")
-    find.add_argument("--begriff", action="append", default=[], help="Zielrolle, wiederholbar. Standard: Zielrollen im Profil.")
-    find.add_argument("--ort", default="", help="Suchregion, leer für alle Standorte")
-    find.add_argument("--greenhouse", action="append", default=[], metavar="BOARD")
-    find.add_argument("--indeed-datei", type=Path, help="Geprüfte Indeed-Funde als JSON, Format in docs/RECHERCHE.md")
-    find.add_argument("--seiten", type=int, default=1, help="Maximale BA-Seiten pro Begriff")
-    find.add_argument("--umkreis", type=int, default=25, help="BA-Radius in km bei Ortsangabe")
-    find.add_argument("--tage", type=int, default=14, help="BA-Veröffentlichungsfenster in Tagen")
-    find.add_argument("--details", action="store_true", help="Anzeigentexte bei BA und Greenhouse zusätzlich abrufen")
+    weekly = commands.add_parser("wochenlauf", help="Suchlauf mit bestätigten Funden, Passung, Entgeltatlas und Dashboard")
+    weekly.add_argument("--plan", type=Path, required=True, help="Persönliche JSON-Datei mit Freigaben und Gehaltsclustern")
+    weekly.add_argument("--bericht", help="Vorhandenen Suchlauf aus exports nach der Sichtung weiterverarbeiten")
+    for find in (find, weekly):
+        find.add_argument("--begriff", action="append", default=[], help="Zielrolle, wiederholbar. Standard: Zielrollen im Profil.")
+        find.add_argument("--ort", default="", help="Suchregion, leer für alle Standorte")
+        find.add_argument("--greenhouse", action="append", default=[], metavar="BOARD")
+        find.add_argument("--indeed-datei", type=Path, help="Geprüfte Indeed-Funde als JSON, Format in docs/RECHERCHE.md")
+        find.add_argument("--seiten", type=int, default=1, help="Maximale BA-Seiten pro Begriff")
+        find.add_argument("--umkreis", type=int, default=25, help="BA-Radius in km bei Ortsangabe")
+        find.add_argument("--tage", type=int, default=14, help="BA-Veröffentlichungsfenster in Tagen")
+        find.add_argument("--details", action="store_true", help="Anzeigentexte bei BA und Greenhouse zusätzlich abrufen")
+    weekly.set_defaults(details=True)
     take = commands.add_parser("suchfund", help="Gelesenen Treffer aus dem Suchbericht in Bewerbungen übernehmen")
     take.add_argument("bericht", help="Dateiname des Suchberichts im Ordner exports")
     take.add_argument("nummer", type=int, help="Treffernummer aus dem Bericht, ab 1")
@@ -415,13 +420,107 @@ def save_band(workspace, a):
                        [a.quelle])
 
 
+def load_run(workspace, name):
+    if not re.fullmatch(r"Suchlauf-[0-9]{8}T[0-9]{12}Z\.json", name):
+        raise ValueError("Dateinamen des Suchberichts aus exports angeben.")
+    return read(workspace.path("exports", name))
+
+
+def weekly_run(workspace, args):
+    from .export import report as build_dashboard
+    plan = read(args.plan)
+    if not isinstance(plan, dict) or plan.keys() - {"bestaetigt", "gehaltscluster"}:
+        raise ValueError("Wochenplan benötigt die dokumentierten Schlüssel.")
+    approved, clusters = {}, plan.get("gehaltscluster", [])
+    if not isinstance(clusters, list) or not isinstance(plan.get("bestaetigt", []), list):
+        raise ValueError("bestaetigt und gehaltscluster müssen Listen sein.")
+    for row in plan.get("bestaetigt", []):
+        if not isinstance(row, dict) or set(row) != {"url", "firma", "textdatei", "gesehen_am"}:
+            raise ValueError("Jede Freigabe benötigt url, firma, textdatei und gesehen_am.")
+        key = identity(row["url"])
+        if key in approved or date.fromisoformat(row["gesehen_am"]) > date.today():
+            raise ValueError("Doppelte oder zukünftige Sichtung.")
+        path = workspace.path(row["textdatei"])
+        approved[key] = (text(row["firma"], "Geprüfter Firmenname", 300),
+                         text(path.read_text(encoding="utf-8-sig"), "Gelesener Originaltext", 200000),
+                         row["gesehen_am"])
+    for cluster in clusters:
+        if (not isinstance(cluster, dict) or set(cluster) != {"titelbegriffe", "kldb", "region", "niveau"}
+                or not isinstance(cluster["titelbegriffe"], list) or not choice_list(cluster["titelbegriffe"])
+                or type(cluster["region"]) is not int or cluster["region"] < 1
+                or type(cluster["niveau"]) is not int or cluster["niveau"] not in range(1, 5)
+                or not isinstance(cluster["kldb"], str) or not re.fullmatch(r"[0-9]{5}", cluster["kldb"])):
+            raise ValueError("Ungültiger Gehaltscluster. Titelbegriffe, Berufscode, Region und Niveau prüfen.")
+    name = args.bericht or search(workspace, args).name
+    found = load_run(workspace, name)
+    data = dict(suchbericht=name, stand=now(), abdeckung=found["abdeckung"], bestaetigt=[], ungesichtet=[], gehaltsquellen=[])
+    profile = workspace.profile()
+    known = {key: job for job in workspace.jobs() for key in (identity(job["url"]), *job.get("identity_aliases", []))}
+    market = {}
+    for ad in rows(found, "treffer"):
+        key = identity(ad["url"])
+        job = known.get(key)
+        seen = approved.get(key)
+        current = ad.get("description")
+        checked_text = seen[1] if seen else (job or {}).get("description")
+        reason = None
+        if not checked_text:
+            reason = "Originalanzeige noch nicht bestätigt"
+        elif current and " ".join(checked_text.split()) != " ".join(current.split()):
+            reason = "Abweichender Volltext benötigt erneute Sichtung"
+        elif not seen and ad.get("aenderungen"):
+            reason = "Geänderte Anzeigenangaben benötigen erneute Sichtung"
+        elif not seen and not current:
+            reason = "Aktueller Volltext fehlt"
+        elif seen and job and checked_text != job["description"]:
+            reason = "Geänderte Anzeige zuerst mit anzeigenstand übernehmen"
+        if reason:
+            data["ungesichtet"].append(dict(nummer=ad["nummer"], url=ad["url"], grund=reason))
+            continue
+        if seen:
+            company, description, date_seen = seen
+            job, _ = workspace.add(company, ad["role"], ad["url"], description, ad.get("reference", ""))
+            workspace.add_note(job["id"], "screening", "Bestätigter Wochenfund", f"Original gelesen am {date_seen}.", [ad["url"]])
+        score = fit(profile, job)
+        record = dict(id=job["id"], url=ad["url"], bewerbungsstatus=job["status"], passung=score, gehaltscluster=[])
+        for cluster in clusters:
+            if not words_match(cluster["titelbegriffe"], job["role"]):
+                continue
+            dimensions = (cluster["kldb"], cluster["region"], cluster["niveau"])
+            if dimensions not in market:
+                try:
+                    result = atlas(*dimensions)
+                    market[dimensions] = dict(cluster=cluster, status="abgerufen" if result["ergebnisse"] else "leer", daten=result)
+                except (ValueError, OSError) as exc:
+                    market[dimensions] = dict(cluster=cluster, status="zugang_offen", grund=str(exc))
+                data["gehaltsquellen"].append(market[dimensions])
+            outcome = market[dimensions]
+            record["gehaltscluster"].append(dict(kldb=dimensions[0], region=dimensions[1], niveau=dimensions[2], status=outcome["status"]))
+            if outcome["status"] == "abgerufen":
+                result = outcome["daten"]
+                workspace.add_note(job["id"], "marktvergleich", f"Entgeltatlas {dimensions[0]}, Region {dimensions[1]}, Niveau {dimensions[2]}",
+                                   json.dumps(result, ensure_ascii=False, indent=2), [result["quelle"]])
+        data["bestaetigt"].append(record)
+    build_dashboard(workspace)
+    with workspace.locked():
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+        dest = workspace.path("exports", "Wochenlauf-" + stamp + ".json")
+        if dest.exists():
+            raise ValueError("Namenskollision im Wochenarchiv. Erneut starten.")
+        write(dest, data)
+    print(f'{len(data["bestaetigt"])} bestätigte Treffer, {len(data["ungesichtet"])} offen. Quellenabdeckung im Bericht.')
+    print(dest)
+    print(workspace.path("exports", "Dashboard.html"))
+    return dest
+
+
 def run(args, workspace):
     if args.command == "suchlauf":
         search(workspace, args)
+    elif args.command == "wochenlauf":
+        weekly_run(workspace, args)
     elif args.command == "suchfund":
-        if not re.fullmatch(r"Suchlauf-[0-9]{8}T[0-9]{12}Z\.json", args.bericht):
-            raise ValueError("Dateinamen des Suchberichts aus exports angeben.")
-        report = read(workspace.path("exports", args.bericht))
+        report = load_run(workspace, args.bericht)
         listings = rows(report, "treffer")
         if not 1 <= args.nummer <= len(listings) or not isinstance(listings[args.nummer - 1], dict):
             raise ValueError("Treffernummer fehlt im Bericht.")

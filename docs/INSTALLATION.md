@@ -110,7 +110,17 @@ Der Einrichtungsassistent installiert weder Codex noch Kontoverbindungen oder Au
 
 ## Aktualisieren und sichern
 
-Die persönliche Installation enthält eine Kopie des Werkzeugs. Neue GitHub-Versionen ändern deinen Arbeitsordner nicht automatisch. Sichere den ganzen persönlichen Ordner an einem privaten Ort, bevor du Werkzeugdateien aktualisierst. Tausche nur `start.py`, `bewerbung`, `resources` und `docs` gegen die neue Version aus. `profil.json`, `interview.json`, `bewerbungen.json`, Belege und Unterlagen erhalten. Lies vor einem Versionssprung die Release-Hinweise.
+Wenn du bereits mit einer lokalen 0.5.x-Installation arbeitest, beende laufende Bewerbungsbefehle, Routinen und offene Browserprofile. Schließe auch Editoren, die automatisch speichern. Sichere den bisherigen Ordner privat. Ersetze beide Beispielpfade durch deine Ordner. Das Ziel muss neu sein und außerhalb der Quelle sowie außerhalb eines Git-Repositories liegen.
+
+```sh
+npx github:kwinter-onnetworkagency/bewerbungs-assistent#v0.6.0 aktualisieren --von "/Pfad/Mein-Bewerbungsprojekt" --ziel "/Pfad/Mein-Bewerbungsprojekt-0.6"
+```
+
+Der Befehl installiert die neue Werkzeugfassung neben dem bisherigen Arbeitsordner. Er übernimmt die Originaldateien von Profil, Interview, bisherigen Bewerbungen, Belegen, Unterlagen, Portal-, Mail- und Gesprächsdaten sowie deiner eigenen Portfolioseite. Auch selbst angelegte Dateien werden kopiert. Bestehende Exporte bleiben als bisheriger Stand erhalten. Die interne Kennung des Arbeitsordners bleibt erhalten. Während der Übernahme gilt im alten Ordner die normale temporäre Schreibsperre. Symbolische Links, Sonderdateien und verschachtelte Git-Verzeichnisse werden mit einem Hinweis abgewiesen. Trenne solche externen Verweise vor einem erneuten Versuch in einer privaten Kopie.
+
+**Anpassungen vergleichen.** Die neue Edition von `start.py`, `bewerbung/`, `resources/`, `docs/` und `LICENSE` ist im Ziel aktiv. Im angezeigten Ordner `Update-Abgleich/werkzeug-bisher/` findest du die bisherige Fassung einschließlich eigener Vorlagen und Änderungen in diesen Pfaden. Der Zielordner behält vorhandene Projektanweisungen und gleichnamige Skills als aktive Fassung. Abweichende neue Vorlagen stehen unter `Update-Abgleich/vorlagen-neu/`; neue, bisher fehlende Skills kommen direkt hinzu. Vergleiche die Anweisungen und übernimm die für dich passenden Ergänzungen. Bei einem weiteren Update bekommt der neue Abgleichordner einen eigenen Namen.
+
+Öffne den **neuen privaten Arbeitsordner** im Assistenten. Prüfe dort mit `python3 start.py pruefen` das Profil und erzeuge mit `python3 start.py bericht` die aktuelle Übersicht. Unter Windows nutze `py -3`. Bei Browserprojekten kannst du den geprüften Chat-Export aus diesem Ordner erneut übernehmen. Richte vorhandene Routinen und Verknüpfungen auf den neuen Pfad aus, bevor du die Arbeit fortsetzt. Den bisherigen Ordner kannst du als private Sicherung behalten, bis du den neuen Stand geprüft hast.
 
 ## Offizielle Quellen
 
@@ -125,6 +135,4 @@ Quellenstand 24.11.2026. Bedienoberflächen und Tarife können sich ändern:
 - [Claude Code: Skills aufrufen](https://code.claude.com/docs/en/skills)
 - [Codex: Skills nutzen](https://developers.openai.com/codex/skills/)
 
-Bei einem Update auf v0.6.0 kopiere zusätzlich `resources/ASSISTENT.txt` in deine Projektanweisungen (eigene Regeln beibehalten). Für native Aufrufe kopiere die Unterordner aus `resources/skills/` nach `.claude/skills/` (Claude Code) bzw. `.agents/skills/` (Codex). Gleichnamige eigene Skills vorher vergleichen. Öffne den persönlichen Ordner erneut.
-
-Ab Version 0.3 findest du die persönliche Übersicht in `exports/Dashboard.html`. Bestehende Installationen wie oben aktualisieren, dabei die Programmvorlagen aus `resources/` übernehmen und die eigenen Arbeitsdaten erhalten. Beim nächsten Bericht wird das Dashboard neu erzeugt. Für Browserprojekte kann [der Arbeitsleitfaden](ARBEITSPLATZ.md) zusätzlich hochgeladen werden.
+Kontakt-, Mailkonto- und Gehaltspräferenzen werden beim Chat-Export standardmäßig ausgelassen. Übernimm sie bei Bedarf gezielt mit `chat-export --mit-kontakt` oder `chat-export --mit-gehalt`. Lies weiterhin Freitexte auf persönliche Angaben durch.

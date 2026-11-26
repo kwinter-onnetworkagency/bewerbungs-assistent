@@ -1,6 +1,8 @@
 import argparse
 import contextlib
-from datetime import date
+from datetime import date, datetime, timezone
+from email.message import EmailMessage
+from email.utils import format_datetime
 import hashlib
 import io
 from pathlib import Path
@@ -82,6 +84,26 @@ class PackageTest(unittest.TestCase):
         write(self.plan, spec)
         return Path(self.command("anlagenpaket", self.jid, "--plan", str(self.plan)))
 
+    @unittest.skipUnless(tools_available("pdfinfo", "pdftotext"), "Lokale Poppler-Werkzeuge erforderlich")
+    def test_mail_timestamp_resolves_submission_across_calendar_days(self):
+        self.add_docs()
+        spec = {"pflicht": ["cv"], "dateien": [{"name": "Vita.pdf", "anlagen": ["cv"]}]}
+        # Die Uhrzeiten liegen fünf Minuten auseinander, die Datumsangaben in UTC und New York auf zwei Tagen.
+        with patch("bewerbung.anlagen.now", return_value="2022-06-01T00:05:00+00:00"):
+            checked = self.build(spec)
+        eml = self.base / "quittung.eml"
+        eml.write_bytes(b"Date: Tue, 31 May 2022 20:10:00 -0400\r\nMessage-ID: <probe@example.org>\r\n\r\nBestaetigung")
+        from bewerbung.mailstand import mail_info
+        mail = mail_info(eml)
+        self.workspace.record(self.jid, "beworben", eml, "2022-05-31", "Versand bestätigt", mail["message_id"], mail=mail)
+        anlagen.associate(self.workspace, self.jid, checked.name, 1, "Anlagen geprüft")
+        self.assertEqual(self.workspace.jobs()[0]["events"][0]["eingereichtes_paket"]["fassung"], checked.name)
+        jobs = self.workspace.jobs()
+        jobs[0]["events"][0]["mail"]["mail_at"] = "2022-05-31T20:01:00-04:00"
+        write(self.workspace.path("bewerbungen.json"), jobs)
+        with self.assertRaisesRegex(ValueError, "nach der belegten"):
+            anlagen.associate(self.workspace, self.jid, checked.name, 1, "Vorzeitige Mail")
+
     def test_validation_limits_assignments_and_paths(self):
         self.assertEqual(self.command("anlagen"), "[]")
         for key, value in [
@@ -147,6 +169,33 @@ class PackageTest(unittest.TestCase):
         event = self.workspace.jobs()[0]["events"][0]
         self.assertEqual(event["eingereichtes_paket"]["fassung"], separate.name)
         self.assertEqual(event["eingereichtes_paket"]["kanal"], "Portal")
+        self.assertEqual(event["eingereichtes_paket"]["zuordnung"], "nutzerzuordnung")
+        message = EmailMessage()
+        message["Subject"] = "Einreichung"
+        message["Date"] = format_datetime(datetime.now(timezone.utc))
+        message["Message-ID"] = "<eigene-kopie@example.org>"
+        message.set_content("Übermittlung mit den Anlagen.")
+        for name, path in files.items():
+            message.add_attachment(path.read_bytes(), maintype="application", subtype="pdf", filename="Kopie-" + name)
+        original = self.base / "original.eml"
+        original.write_bytes(message.as_bytes())
+        # Other attachments are a contradiction even if the claimed submission date matches.
+        extra_message = EmailMessage()
+        extra_message.set_content("Bestätigung")
+        extra_message.add_attachment(b"%PDF-fremd", maintype="application", subtype="pdf", filename="anderer-cv.pdf")
+        different = self.base / "andere.eml"
+        different.write_bytes(extra_message.as_bytes())
+        jobs = self.workspace.jobs()
+        jobs[0]["events"][0]["mail"] = {"original": self.workspace.evidence(different)}
+        write(self.workspace.path("bewerbungen.json"), jobs)
+        with self.assertRaisesRegex(ValueError, "weichen vom Paket ab"):
+            anlagen.associate(self.workspace, self.jid, separate.name, 1, "Nicht dasselbe Paket")
+
+        jobs = self.workspace.jobs()
+        jobs[0]["events"][0]["mail"] = {"original": self.workspace.evidence(original)}
+        write(self.workspace.path("bewerbungen.json"), jobs)
+        anlagen.associate(self.workspace, self.jid, separate.name, 1, "Anhänge später erhalten")
+        self.assertEqual(self.workspace.jobs()[0]["events"][0]["eingereichtes_paket"]["zuordnung"], "anhang_hash")
         with self.assertRaisesRegex(ValueError, "andere Fassung"):
             anlagen.associate(self.workspace, self.jid, merged.name, 1, "Andere PDF")
         self.workspace.path(event["evidence"]["file"]).write_bytes(b"geaendert")

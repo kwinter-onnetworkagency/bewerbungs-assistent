@@ -72,6 +72,9 @@ class NativeTest(unittest.TestCase):
         self.assertIn('TEL;TYPE=fax;VALUE=text:100', vcard)
 
     def test_failed_readback_never_records_success_or_retargets_pending_work(self):
+        with self.assertRaisesRegex(ValueError, 'Vorprüfung'):
+            self.call(self.event, lambda _: subprocess.CompletedProcess([], 0, '{"verified":false,"write_started":false}', ''))
+        self.assertFalse(list(self.root.rglob('*.native.json')))
         with self.assertRaisesRegex(ValueError, 'Rücklesen'):
             self.call(self.event, lambda _: subprocess.CompletedProcess([], 0, '{"verified":false}', ''))
         state = read(next(self.root.rglob('*.native.json')))

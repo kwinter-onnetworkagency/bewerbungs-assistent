@@ -75,6 +75,9 @@ def reconcile(prior, data):
     updated["account"] = data.get("account") or prior.get("account")
     updated["protected"] = prior.get("protected", False) or data["protected"]
     updated["next_step"] = data.get("next_step") or prior.get("next_step", "")
+    if prior.get("time_source") == "empfang" and data.get("time_source") != "empfang":
+        for key in ("mail_at", "header_date", "time_source"):
+            updated[key] = prior[key]
     for key in ("captured_at", "original"):
         if key in prior:
             updated[key] = prior[key]
@@ -86,8 +89,15 @@ def capture(w, a):
     data = mail_info(source)
     reason = text(a.grund, "Gelesener Inhalt und Zuordnungsgrund")
     folder = text(a.ablage, "Tatsächlicher Ordner")
-    data.update(folder=folder, next_step=a.schritt or "", protected=a.schuetzen, account=getattr(a, "konto", None),
-                direction=a.richtung)
+    data.update(report_zone=a.zone, folder=folder, next_step=a.schritt or "", protected=a.schuetzen, account=getattr(a, "konto", None),
+                direction=a.richtung or {"service": "service", "antwort": "eigen"}.get(a.art, "arbeitgeber"))
+    if a.empfangen:
+        received = datetime.fromisoformat(a.empfangen)
+        if received.tzinfo is None:
+            raise ValueError("Empfangszeitpunkt mit Zeitzone angeben.")
+        data.update(header_date=data["mail_at"], mail_at=received.isoformat(), time_source="empfang")
+    else:
+        data["time_source"] = "Date-Header"
     if not a.stelle:
         if a.art != "ungeklaert":
             raise ValueError("Eindeutige Stellen-ID angeben oder als ungeklärt erfassen.")
@@ -145,11 +155,13 @@ def mailreport(w, a):
             if when.date() != dayof(row["recorded_at"]):
                 result += " (nachgetragen " + str(dayof(row["recorded_at"])) + ")"
             values = [row["company"], " ".join(filter(None, [row["role"], row["reference"]])),
-                      when.strftime("%d.%m.%Y %H:%M"), result, row["next_step"], "/".join(moves[row["message_id"]]["target"]) if row["message_id"] in moves else row["folder"]]
+                      when.strftime("%d.%m.%Y %H:%M"), result, row.get("next_step", ""), "/".join(moves[row["message_id"]]["target"]) if row["message_id"] in moves else row.get("folder", "")]
             lines.append("| " + " | ".join(cell(v) for v in values) + " |")
         if not selected:
             result = "Keine neuen relevanten Rückmeldungen" if a.vollstaendig else "Keine neu erfasste Nachricht im geprüften Ausschnitt"
             lines.append(f"| – | – | – | {result} | – | – |")
+        if not a.vollstaendig:
+            lines.append("| | Prüfumfang | | " + cell(a.abdeckung) + " | Fehlende Konten oder Zeiträume nachprüfen | |")
         current_tasks = {(j["id"], n["title"]): n for j in w.jobs() for n in j.get("notes", []) if n["kind"] == "aufgabe"}
         tasks = [n["title"] for n in current_tasks.values() if not n.get("done")]
         unresolved = [r["subject"] for r in rows if r["kind"] == "ungeklaert"]
@@ -181,7 +193,8 @@ def register(commands):
     p.add_argument("--grund", required=True)
     p.add_argument("--ablage", required=True)
     p.add_argument("--konto", help="Tatsächliches persönliches Quellkonto, für spätere Ablage erforderlich")
-    p.add_argument("--richtung", choices=("arbeitgeber", "eigen", "service"), default="arbeitgeber")
+    p.add_argument("--empfangen", help="Belegter Empfangszeitpunkt mit UTC-Versatz. Ohne Angabe gilt der Date-Header.")
+    p.add_argument("--richtung", choices=("arbeitgeber", "eigen", "service"))
     p.add_argument("--schritt")
     p.add_argument("--schuetzen", action="store_true")
     p.add_argument("--zone", default="Europe/Berlin")

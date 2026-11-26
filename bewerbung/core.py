@@ -86,7 +86,7 @@ def identity(value, reference="", company=""):
         if ref:
             return f"smartrecruiters:{parts[0].lower()}:{ref[1]}"
     if re.fullmatch(r"[a-z0-9-]+\.wd[0-9]+\.myworkdayjobs\.com", host) and "job" in parts:
-        for part in parts[parts.index("job") + 1:]:
+        for part in reversed(parts[parts.index("job") + 1:]):
             ref = re.fullmatch(r".+_([A-Za-z0-9-]*[0-9][A-Za-z0-9-]*)", part)
             if ref:
                 return f"workday:{host.split('.')[0]}:{ref[1].upper()}"
@@ -177,10 +177,17 @@ class Workspace:
         if not isinstance(data, list):
             raise ValueError("bewerbungen.json muss der lokale vollständige Arbeitsstand sein. Chat-Export nicht darüber kopieren.")
         required = {"id", "company", "role", "url", "identity", "description", "status", "events", "draft", "qa", "score_manual", "score_reason"}
+        profile = None
         for item in data:
             if not isinstance(item, dict) or not required <= item.keys() or not isinstance(item["events"], list):
                 raise ValueError("Unvollständiger Arbeitsstand. Exportansichten nicht als bewerbungen.json übernehmen; lokale Sicherung verwenden.")
             identifier(item["id"])
+            if item["status"] == "vorbereitet":
+                if profile is None:
+                    profile = self.profile()
+                checked = (item.get("qa") or {}).get("fingerprint")
+                if not checked or checked != draft_fingerprint(item, profile):
+                    item["status"] = "recherche"
         return data
 
     def job(self, jobs, jid):
@@ -272,7 +279,15 @@ class Workspace:
             raise ValueError("Original während der Erfassung geändert.")
         if for_submission:
             from .anlagen import is_application_artifact
-            if is_application_artifact(self, digest):
+            portal_report = False
+            if source.suffix.lower() == ".json":
+                try:
+                    value = json.loads(data)
+                    portal_report = isinstance(value, dict) and (value.get("typ") == "portal_vorbereitung" or
+                        ("dateien" in value and str(value.get("hinweis", "")).startswith("Portalangaben betreffen einzelne Dateien")))
+                except (UnicodeError, ValueError, RecursionError):
+                    pass
+            if portal_report or is_application_artifact(self, digest):
                 raise ValueError("Eigene Bewerbungsunterlagen sind kein Versandbeleg.")
         suffix = source.suffix.lower()
         if suffix not in {".txt", ".md", ".pdf", ".png", ".jpg", ".jpeg", ".eml", ".json"}:
@@ -309,6 +324,9 @@ class Workspace:
                 pending = unresolved_by_id(self, message_id)
                 if pending:
                     mail = reconcile(pending, mail)
+                    if mail.get("report_zone"):
+                        from .mailstand import timezone
+                        occurred = dt.datetime.fromisoformat(mail["mail_at"]).astimezone(timezone(mail["report_zone"])).date().isoformat()
             if message_id:
                 for job in jobs:
                     previous = next((e for e in job["events"] if e.get("message_id") == message_id), None)
@@ -337,6 +355,11 @@ class Workspace:
             proof = self.evidence(source, for_submission=status == "beworben",
                                   expected_hash=mail["sha256"] if mail else None) if source else None
             if proof:
+                if not message_id and any(
+                    e["status"] == status and e["occurred_on"] == occurred and e["note"] == note
+                    and (e.get("evidence") or {}).get("sha256") == proof["sha256"] for e in item["events"]
+                ):
+                    return False
                 for other in jobs:
                     if other["id"] != jid and any(e.get("evidence", {}).get("sha256") == proof["sha256"] for e in other["events"] if e.get("evidence")):
                         raise ValueError("Derselbe Beleg gehört bereits zu einer anderen Stelle. Zuordnung manuell klären.")

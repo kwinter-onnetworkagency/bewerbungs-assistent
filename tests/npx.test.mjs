@@ -6,7 +6,7 @@ import path from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 const launcher = fileURLToPath(new URL('../bin/start.mjs', import.meta.url))
-const commands = ['interview','stellensuche','anschreiben','rueckmeldung','bericht','dashboard','gehalt','gespraech',
+const commands = ['linkedin','bewerbung','interview','stellensuche','anschreiben','rueckmeldung','bericht','dashboard','gehalt','gespraech',
   'lebenslauf','anlagen','portal','portfolio','persona','kontakt','termin','mail','routine']
 function setup(dest, mode) {
   return spawnSync(process.execPath, [launcher, '--assistent', mode, '--ziel', dest, '--name', 'Testperson'], {encoding: 'utf8'})

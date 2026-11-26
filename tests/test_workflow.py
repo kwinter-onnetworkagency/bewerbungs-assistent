@@ -233,6 +233,46 @@ class WorkflowTest(unittest.TestCase):
             self.w.record(self.jid, "vorbereitet", None, "2026-01-01", "Prüfung ist veraltet")
         self.assertEqual(self.w.jobs()[0]["status"], "recherche")
 
+    def test_prepared_status_rechecks_profile_in_all_views_without_editing_history(self):
+        self.w.draft(self.jid, "Belegter Text", ["projekt"])
+        self.w.qa(self.jid, "Fakten geprüft", "Fassung gelesen")
+        self.w.record(self.jid, "vorbereitet", None, "2026-01-01", "Beide Prüfungen erledigt")
+        self.assertEqual(self.w.jobs()[0]["status"], "vorbereitet")
+        original = self.w.path("bewerbungen.json").read_bytes()
+        self.profile["facts"][0]["text"] = "Korrigierter Sachverhalt"
+        write(self.w.path("profil.json"), self.profile)
+        self.assertEqual(self.w.jobs()[0]["status"], "recherche")
+        with contextlib.redirect_stdout(io.StringIO()):
+            main(["--ordner", str(self.root), "bericht"])
+            main(["--ordner", str(self.root), "chat-export"])
+        self.assertIn("| recherche |", self.w.path("exports", "BERICHT.md").read_text(encoding="utf8"))
+        html = self.w.path("exports", "Dashboard.html").read_text(encoding="utf8")
+        snapshot = json.loads(html.split('id="snapshot">', 1)[1].split("</script>", 1)[0])
+        self.assertEqual(snapshot[0]["status"], "recherche")
+        self.assertEqual(snapshot[0]["events"][0]["status"], "vorbereitet")
+        with zipfile.ZipFile(self.w.path("exports", "chat-projekt.zip")) as export:
+            self.assertEqual(json.loads(export.read("ARBEITSSTAND.json"))["jobs"][0]["status"], "recherche")
+        self.assertEqual(self.w.path("bewerbungen.json").read_bytes(), original)
+        self.w.qa(self.jid, "Korrektur geprüft", "Fassung erneut gelesen")
+        self.w.record(self.jid, "vorbereitet", None, "2026-01-02", "Prüfung erneuert")
+        self.assertEqual(self.w.jobs()[0]["status"], "vorbereitet")
+
+    def test_portal_receipt_retry_only_adds_one_submission_event(self):
+        cmd = ["--ordner", str(self.root), "ereignis", self.jid, "--status", "beworben", "--datum", "2026-01-01",
+               "--grund", "Portalquittung gelesen", "--beleg", str(self.proof)]
+        with contextlib.redirect_stdout(io.StringIO()) as output:
+            main(cmd)
+            first = self.w.path("bewerbungen.json").read_bytes()
+            main(cmd)
+        self.assertEqual(self.w.path("bewerbungen.json").read_bytes(), first)
+        self.assertIn("Ereignis bereits erfasst", output.getvalue())
+        self.assertEqual(len(self.w.jobs()[0]["events"]), 1)
+        other = self.base / "zweite-quittung.txt"
+        other.write_text("Weitere bestätigte Einreichung.", encoding="utf8")
+        self.w.record(self.jid, "beworben", other, "2026-01-01", "Portalquittung gelesen")
+        self.w.record(self.jid, "interview", self.proof, "2026-01-02", "Späterer Termin bestätigt")
+        self.assertEqual(len(self.w.jobs()[0]["events"]), 3)
+
     def test_unknown_fact_and_changed_draft_do_not_keep_qa(self):
         with self.assertRaises(ValueError):
             self.w.draft(self.jid, "Falsche Qualifikation", ["not-present"])

@@ -64,3 +64,22 @@ python3 start.py gehaltswert STELLEN-ID --titel "Beispielquelle" --quelle https:
 ```
 
 Die Originaleinheit bleibt sichtbar. Monatswerte erhalten zusätzlich eine gekennzeichnete Jahreshochrechnung. Für gedeckelte Angaben wie „größer als“ oder fehlende Werte verwende eine Textnotiz, damit die Aussage der Quelle erhalten bleibt.
+
+Für das private Browserprojekt kann `chat-export --mit-verlauf` die vollständige gespeicherte Stellenbeschreibung, Ereignisarten und Daten sowie Screening-, Gesprächs- und Aufgabennotizen mitgeben. Lies die exportierten Texte vor dem Upload. Mailoriginale, Empfängerschlüssel und Dateien aus Nachweispaketen bleiben im persönlichen Ordner.
+
+## Nachfassen, Ampel und Scoreverteilung
+
+„Heute“ zeigt eine Nachfrage ab 14 Tagen ohne belegten persönlichen Kontakt, ab 28 Tagen als dringend. Der Zeitraum beginnt mit der belegten Einreichung oder dem jüngsten belegten Kontakt, der Antwort, Rückfrage oder Terminabstimmung. Automatische Eingangsbestätigungen und interne Notizen setzen die Uhr nicht zurück. Die Liste berücksichtigt Bewerbungen im Status `beworben` und blendet bestätigte geschlossene Anzeigen aus. Prüfe vor einer persönlichen Nachfrage den Verlauf. Der Bericht versendet keine Mail.
+
+Für eigene Fristen oder Statusbezeichnungen kannst du im privaten Arbeitsordner eine `dashboard.json` speichern. Ersetze die Beispiel-ID durch deine Stellen-ID oder lasse `je_stelle` weg. Mit `python start.py bericht` übernimmst du die Einstellungen. Mögliche Ampelfarben sind `grau`, `gelb`, `gruen` und `rot`. Die gespeicherten Statuswerte bleiben beim Umbenennen erhalten.
+
+```json
+{
+  "faellig_ab": 14,
+  "dringend_ab": 28,
+  "status": {"beworben": {"name": "Antwort ausstehend", "ampel": "gelb"}},
+  "je_stelle": {"job-beispiel": {"faellig_ab": 21, "dringend_ab": 35}}
+}
+```
+
+„Auswertung“ gruppiert die Stellen nach 85 bis 100, 70 bis 84, 50 bis 69 sowie 0 bis 49 Punkten. Fehlende Bewertungen stehen separat. Ein manueller Wert, auch null Punkte, hat Vorrang vor dem automatischen Vergleich. In einer importierten gekürzten Ansicht zählen die mitgelieferten manuellen Scores.

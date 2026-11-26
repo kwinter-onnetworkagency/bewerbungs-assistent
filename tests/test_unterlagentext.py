@@ -148,6 +148,88 @@ class UnterlagenTest(unittest.TestCase):
                   self.assertRaisesRegex(ValueError, error)):
                 check_file(path, document)
 
+    def test_explicit_tag_selection_ranks_exact_unique_keyword_matches(self):
+        profile = self.w.profile()
+        profile['facts'][1]['keywords'] = ['Planung', 'Berichte']
+        write(self.w.path('profil.json'), profile)
+        doc = prepare(self.w, 'lebenslauf', language='en', tags=['BERICHTE', 'Planung', 'planung'])
+        self.assertEqual(doc.fact_ids, ['plaene', 'berichte'])
+        self.assertLess(doc.paragraphs.index('Standardised planning.'), doc.paragraphs.index('Prepared reports.'))
+        with contextlib.redirect_stdout(io.StringIO()) as output:
+            run(self.parse(['textpruefung', 'lebenslauf', '--tag', 'berichte', '--tag', 'planung', '--max-fakten', '1']), self.w)
+        self.assertIn('Fakten-IDs: plaene', output.getvalue())
+        with self.assertRaisesRegex(ValueError, 'Kein Profilfakt'):
+            prepare(self.w, 'lebenslauf', tags=['Plan'])
+        with self.assertRaises(ValueError):
+            prepare(self.w, 'lebenslauf', tags=['Planung'], fact_ids=['seminar'])
+
+    def test_clean_draft_creates_new_file_and_preserves_signed_sources_and_history(self):
+        raw = 'Guten Tag,\r\n\r\nKo\u00adordination\u00a0mit\u200b Team.\ufeff'
+        self.w.draft(self.jid, raw, ['plaene'])
+        before = self.w.path('bewerbungen.json').read_bytes()
+        with contextlib.redirect_stdout(io.StringIO()) as output:
+            run(self.parse(['entwurf-bereinigen', self.jid]), self.w)
+            run(self.parse(['entwurf-bereinigen', self.jid]), self.w)
+        a, b = map(Path, output.getvalue().splitlines())
+        self.assertEqual(a.read_text(encoding='utf8'), 'Guten Tag,\n\nKoordination mit Team.')
+        self.assertEqual(a.read_bytes(), b.read_bytes())
+        self.assertNotEqual(a, b)
+        self.assertEqual(self.w.path('bewerbungen.json').read_bytes(), before)
+
+    def test_clean_docx_preserves_text_and_attribution_and_rejects_foreign_content(self):
+        doc = prepare(self.w, 'lebenslauf', job_id=self.jid)
+        original = save(self.w, doc)
+        with zipfile.ZipFile(original) as archive:
+            parts = {name: archive.read(name) for name in archive.namelist()}
+        core = 'docProps/core.xml'
+        app = 'docProps/app.xml'
+        parts[core] = parts[core].replace(b'</cp:coreProperties>', b'<cp:lastModifiedBy>Interne Person</cp:lastModifiedBy>'
+            b'<cp:revision>8</cp:revision><dc:rights>Eigene Herkunftsangabe</dc:rights><!--bleibt--></cp:coreProperties>')
+        parts[app] = (b'<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties">'
+                      b'<Company>Interner Betrieb</Company><AppVersion>12</AppVersion><Application>Writer</Application></Properties>')
+        parts['_rels/.rels'] = parts['_rels/.rels'].replace(b'</Relationships>',
+            b'<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/></Relationships>')
+        parts['[Content_Types].xml'] = parts['[Content_Types].xml'].replace(b'</Types>',
+            b'<Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/></Types>')
+        def deploy():
+            with zipfile.ZipFile(original, 'w') as archive:
+                for name, payload in parts.items():
+                    archive.writestr(name, payload)
+        deploy()
+        original_bytes = original.read_bytes()
+        command = self.parse(['docx-bereinigen', 'lebenslauf', str(original), '--stelle', self.jid])
+        with contextlib.redirect_stdout(io.StringIO()) as log:
+            run(command, self.w)
+        output = Path(log.getvalue().strip())
+        self.assertNotEqual(output, original)
+        self.assertEqual(original.read_bytes(), original_bytes)
+        self.assertIn('A4', check_file(output, doc))
+        with zipfile.ZipFile(output) as archive:
+            self.assertEqual(archive.read('word/document.xml'), parts['word/document.xml'])
+            self.assertNotIn(b'Interne Person', archive.read(core))
+            self.assertNotIn(b'<cp:revision>', archive.read(core))
+            self.assertIn(b'Eigene Herkunftsangabe', archive.read(core))
+            self.assertIn(b'<!--bleibt-->', archive.read(core))
+            self.assertNotIn(b'Interner Betrieb', archive.read(app))
+            self.assertIn(b'Writer', archive.read(app))
+        with contextlib.redirect_stdout(io.StringIO()) as log:
+            run(self.parse(['docx-bereinigen', 'lebenslauf', str(original), '--stelle', self.jid, '--ohne-autor']), self.w)
+        with zipfile.ZipFile(Path(log.getvalue().strip())) as archive:
+            self.assertNotIn(b'<dc:creator>', archive.read(core))
+            self.assertIn(b'Eigene Herkunftsangabe', archive.read(core))
+            self.assertIn(self.jid.encode(), archive.read(core))
+        parts['_xmlsignatures/sig1.xml'] = b'<Signature/>'
+        deploy()
+        with self.assertRaisesRegex(ValueError, 'signierte'):
+            run(command, self.w)
+        del parts['_xmlsignatures/sig1.xml']
+        parts['word/document.xml'] = parts['word/document.xml'].replace(b'Planung', b'Anderer Inhalt')
+        deploy()
+        with self.assertRaisesRegex(ValueError, 'eigenen Fassung'):
+            run(command, self.w)
+        with self.assertRaisesRegex(ValueError, 'dokumente/'):
+            run(self.parse(['docx-bereinigen', 'lebenslauf', str(self.w.path('belege', 'nachweis.docx'))]), self.w)
+
     def test_station_pagination_and_profile_sections(self):
         profile = self.w.profile()
         profile['facts'].extend([

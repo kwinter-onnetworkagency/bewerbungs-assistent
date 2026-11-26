@@ -10,7 +10,7 @@ import hashlib
 import io
 import json
 import zipfile
-from .core import identifier, now, url, write, write_bytes
+from .core import STATUSES, identifier, now, read, text, url, write, write_bytes
 from .anlagen import digest, file_name, package_versions, stored_source
 
 
@@ -244,8 +244,67 @@ def report_pages(workspace, jobs, template):
     page("Pakete.html", "Paketübersicht", "".join(packages) or "<p>Keine Pakete oder Einreichungen erfasst.</p>")
 
 
+def dashboard_config(workspace):
+    path = workspace.path("dashboard.json")
+    config = read(path) if path.is_file() else {}
+    if not isinstance(config, dict) or set(config) - {"faellig_ab", "dringend_ab", "status", "je_stelle"}:
+        raise ValueError("Unbekannte Einstellung in dashboard.json.")
+    def thresholds(value, base):
+        if not isinstance(value, dict):
+            raise ValueError("Follow-up-Fristen müssen als Objekt angegeben werden.")
+        result = {key: value.get(key, default) for key, default in base.items()}
+        if (any(type(n) is not int for n in result.values()) or
+                not 1 <= result["faellig_ab"] <= result["dringend_ab"]):
+            raise ValueError("Follow-up-Fristen benötigen positive Tage in aufsteigender Reihenfolge.")
+        return result
+    defaults = thresholds(config, {"faellig_ab": 14, "dringend_ab": 28})
+    by_job, overrides = config.get("je_stelle", {}), config.get("status", {})
+    if not isinstance(by_job, dict) or not isinstance(overrides, dict):
+        raise ValueError("je_stelle und status benötigen Objekte.")
+    per_job = {}
+    for jid, value in by_job.items():
+        if not isinstance(value, dict) or set(value) - defaults.keys():
+            raise ValueError("Unbekannte Frist für die Stelle.")
+        per_job[identifier(jid)] = thresholds(value, defaults)
+    for key, entry in overrides.items():
+        if key not in STATUSES or not isinstance(entry, dict) or entry.keys() - {"name", "ampel"}:
+            raise ValueError("Unbekannte Statusoption.")
+        if "name" in entry:
+            text(entry["name"], "Statusbezeichnung", 60)
+        if "ampel" in entry and entry["ampel"] not in ("grau", "gelb", "gruen", "rot"):
+            raise ValueError("Unbekannte Ampelfarbe.")
+    return defaults, per_job, overrides
+
+
+def followup_date(workspace, job):
+    if job["status"] != "beworben":
+        return None
+    last_state = next((s["zustand"] for s in reversed(job.get("anzeigenstaende", []))
+                       if s["zustand"] in ("offen", "geschlossen")), None)
+    if last_state == "geschlossen":
+        return None
+    dates = []
+    submitted = False
+    for event in job["events"]:
+        kind = event["status"]
+        if kind not in ("beworben", "antwort", "rueckfrage", "kontakt", "termindetail"):
+            continue
+        if not evidence_file(workspace, event):
+            continue
+        stamp = date.fromisoformat(event["occurred_on"])
+        if stamp <= date.today():
+            dates.append(stamp)
+            submitted |= kind == "beworben"
+    return max(dates).isoformat() if submitted else None
+
+
 def dashboard(workspace, jobs):
     template = (Path(__file__).resolve().parents[1] / "resources" / "Dashboard.html").read_text(encoding="utf-8")
+    from .recherche import fit
+    thresholds, per_job, statuses = dashboard_config(workspace)
+    profile = workspace.profile()
+    status_json = json.dumps(statuses, ensure_ascii=True).replace("<", r"\u003c")
+    template = template.replace('id="status-options">{}</script>', 'id="status-options">' + status_json + '</script>')
     report_pages(workspace, jobs, template)
     template = template.replace('id="local-reports" hidden', 'id="local-reports"')
     keys = ("id", "company", "role", "status", "url", "reference", "score_manual", "score_reason", "notes", "checked_at")
@@ -258,18 +317,25 @@ def dashboard(workspace, jobs):
                          "evidence": bool(n.get("evidence"))} for n in job.get("notes", [])]
         row["events"] = [{k: e[k] for k in ("status", "occurred_on", "recorded_at", "note") if k in e}
                          for e in job["events"]]
+        row["followup_from"] = followup_date(workspace, job)
+        row["followup_days"] = per_job.get(job["id"], thresholds)
+        row["score_effective"] = fit(profile, job)["score"]
         row["local_detail"] = True
         row["documents"] = [name for name in docs if name.startswith(job["id"] + "-")]
         snapshot.append(row)
+    write_bytes(workspace.path("exports", "Dashboard.html"), embed_jobs(template, snapshot).encode("utf-8"))
+
+
+def embed_jobs(template, snapshot):
     payload = json.dumps(snapshot, ensure_ascii=True).replace("<", r"\u003c")
     before, marker, remainder = template.partition('id="snapshot">')
     empty, end, after = remainder.partition("</script>")
     if not marker or not end or empty.strip() != "[]":
         raise ValueError("Dashboard-Vorlage enthält keinen leeren Datenbereich.")
-    write_bytes(workspace.path("exports", "Dashboard.html"), (before + marker + payload + end + after).encode("utf-8"))
+    return before + marker + payload + end + after
 
 
-def chat_bundle(workspace, *, contact=False, salary=False):
+def chat_bundle(workspace, *, contact=False, salary=False, details=False):
     """Four chosen files; source documents stay local. User reviews all exported text."""
     profile = workspace.profile()
     # Sources may contain local paths or private document links. Export facts, not those locations.
@@ -291,8 +357,17 @@ def chat_bundle(workspace, *, contact=False, salary=False):
                      "unbekannt": "Belegart unbekannt, nicht unabhängig geprüft."}
     public_profile["facts"] = [{"id": f["id"], "text": f["text"], "source": source_labels[f.get("evidence_type", "unbekannt")],
         "evidence_type": f.get("evidence_type", "unbekannt"), "origin": f.get("origin"),
-        "kind": f.get("kind"), "keywords": f.get("keywords", [])} for f in profile["facts"]]
-    summary = [{k: j[k] for k in ["id", "company", "role", "url", "reference", "status", "score_manual", "score_reason"]} for j in workspace.jobs()]
+        "kind": f.get("kind"), "language": f.get("language", "de"), "translations": f.get("translations", {}), "keywords": f.get("keywords", [])} for f in profile["facts"]]
+    keys = ("id", "company", "role", "url", "reference", "status", "score_manual", "score_reason")
+    summary = []
+    for job in workspace.jobs():
+        row = {k: job[k] for k in keys}
+        if details:
+            row["description"] = job["description"]
+            row["events"] = [{k: e[k] for k in ("status", "occurred_on", "recorded_at")} for e in job["events"]]
+            row["notes"] = [{k: n[k] for k in ("kind", "title", "content", "due", "done") if k in n}
+                            for n in job.get("notes", []) if n["kind"] in {"aufgabe", "gespraech", "screening"}]
+        summary.append(row)
     files = {
         "PROFIL.json": json.dumps(public_profile, ensure_ascii=False, indent=2),
         "ARBEITSSTAND.json": json.dumps({"export_only": True, "jobs": summary}, ensure_ascii=False, indent=2),

@@ -8,23 +8,28 @@ import unicodedata
 from xml.etree import ElementTree as ET
 import zipfile
 
-from .documents import W, convert_pdf, prepare, save, save_fitted
+from .documents import W, clean_draft, clean_metadata, convert_pdf, prepare, save, save_fitted
 
 NS = {'w': W}
 KINDS = ('lebenslauf', 'anschreiben')
-COMMANDS = (*KINDS, 'textpruefung', 'ats-pruefung')
+COMMANDS = (*KINDS, 'textpruefung', 'ats-pruefung', 'docx-bereinigen', 'entwurf-bereinigen')
 
 
 def register(commands):
-    for name, help_text in zip(COMMANDS, (
+    draft = commands.add_parser('entwurf-bereinigen', help='Gespeicherten eigenen Brieftext als bereinigte TXT-Kopie ausgeben')
+    draft.add_argument('id', help='Stellen-ID des eigenen Briefentwurfs')
+    for name, help_text in zip(COMMANDS[:-1], (
         'A4-Lebenslauf aus belegten Fakten erstellen', 'Gespeicherten Anschreibenentwurf als A4-Dokument erstellen',
         'Text der gewählten Unterlage gegen ihr Profil prüfen', 'Text und Lesereihenfolge einer DOCX oder PDF abgleichen',
+        'Technische Bearbeiterangaben in einer Kopie der eigenen DOCX entfernen',
     )):
         parser = commands.add_parser(name, help=help_text)
         if name == 'anschreiben':
             parser.add_argument('id', help='Stellen-ID des Entwurfs')
         else:
             parser.add_argument('--stelle', help='Zielstelle, bei Anschreiben erforderlich')
+            parser.add_argument('--tag', action='append', default=[], help='Belegte Fakten nach ihren Stichwörtern auswählen, wiederholbar')
+            parser.add_argument('--max-fakten', type=int, help='Bei Tag-Auswahl die Zahl ausgegebener Fakten begrenzen')
             parser.add_argument('--fakt', action='append', default=[], help='CV auf diesen Profilfakt beschränken, wiederholbar')
         parser.add_argument('--layout', choices=('ats', 'design'), default='ats')
         parser.add_argument('--kompakt', action='store_true', help='Absatzabstände und Schriftgröße für eine kurze Fassung anpassen')
@@ -42,7 +47,9 @@ def register(commands):
             parser.add_argument('--einpassen', action='store_true', help='DOCX und PDF innerhalb des Seitenlimits ausgeben')
         else:
             parser.add_argument('art', choices=KINDS)
-        if name == 'ats-pruefung':
+        if name == 'docx-bereinigen':
+            parser.add_argument('--ohne-autor', action='store_true', help='Auch die eigene Office-Autorenangabe aus der Kopie entfernen')
+        if name in ('ats-pruefung', 'docx-bereinigen'):
             parser.add_argument('datei', help='Lokale DOCX/PDF, relativer Pfad ab dem privaten Arbeitsordner')
 
 
@@ -211,9 +218,13 @@ def check_file(path, document):
 def run(args, workspace):
     if args.command not in COMMANDS:
         return False
+    if args.command == 'entwurf-bereinigen':
+        print(clean_draft(workspace, args.id))
+        return True
     kind = args.command if args.command in KINDS else args.art
     document = prepare(workspace, kind, job_id=getattr(args, 'id', None) or getattr(args, 'stelle', None),
-                       language=args.sprache, fact_ids=getattr(args, 'fakt', []), letter_date=getattr(args, 'datum', None),
+                       language=args.sprache, fact_ids=getattr(args, 'fakt', []), tags=getattr(args, 'tag', []),
+                       max_facts=getattr(args, 'max_fakten', None), letter_date=getattr(args, 'datum', None),
                        recipient=getattr(args, 'empfaengerzeile', []), layout=args.layout, compact=args.kompakt,
                        photo=getattr(args, 'foto', None), signature=getattr(args, 'unterschrift', None),
                        page_two=getattr(args, 'seite_2_ab', None), portfolio=getattr(args, 'portfolio_url', None))
@@ -228,6 +239,8 @@ def run(args, workspace):
         print(path)
         if args.pdf:
             print(convert_pdf(path))
+    elif args.command == 'docx-bereinigen':
+        print(clean_metadata(workspace, document, args.datei, omit_author=args.ohne_autor))
     elif args.command == 'textpruefung':
         check_text(document)
         print('Textprüfung bestanden. Verwendete Fakten-IDs: ' + ', '.join(document.fact_ids))

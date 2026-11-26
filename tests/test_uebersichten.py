@@ -1,5 +1,6 @@
 from datetime import date
 from html.parser import HTMLParser
+import json
 from pathlib import Path
 import tempfile
 import unittest
@@ -53,14 +54,20 @@ class ViewsTest(unittest.TestCase):
                 if not urlsplit(href).scheme and not href.startswith("#"):
                     self.assertTrue((path.parent / unquote(href)).is_file(), (path.name, href))
         detail_path = self.exports / ("Stelle-" + jid + ".html")
+        jobs = self.workspace.jobs()
+        jobs[0]["events"][0]["mail"]["original"] = jobs[0]["events"][0]["evidence"]
+        jobs[0]["events"][0]["evidence"] = self.workspace.evidence(note)
+        write(self.workspace.path("bewerbungen.json"), jobs)
+        report(self.workspace)
         detail = detail_path.read_text(encoding="utf-8")
+        self.assertIn("Nachgetragenes Mailoriginal öffnen", detail)
         self.assertIn("Eingangsbestätigungen", detail)
         self.assertIn("Ihre Bewerbung", detail)
         self.assertIn("Originalanzeige als Text.", detail)
         self.assertNotIn('<img onerror', detail)
         self.assertIn("Score: 0", (self.exports / "Screening.html").read_text(encoding="utf-8"))
         self.assertIn("0 von 1 Stellen", (self.exports / "Kohorten.html").read_text(encoding="utf-8"))
-        evidence = self.workspace.jobs()[0]["events"][0]["evidence"]["file"]
+        evidence = self.workspace.jobs()[0]["events"][0]["mail"]["original"]["file"]
         original = self.workspace.path(evidence)
         self.assertIn("../" + Path(evidence).as_posix(), Links(detail_path).urls)
         original.write_bytes(b"changed")
@@ -72,7 +79,20 @@ class ViewsTest(unittest.TestCase):
         write(self.workspace.path("bewerbungen.json"), jobs)
         report(self.workspace)
         self.assertFalse(any("secret.txt" in href or "javascript:" in href for href in Links(detail_path).urls))
+        profile = self.workspace.profile()
+        profile.setdefault("preferences", {}).update(contact="Person@example.org", salary="56000 EUR", mail="Bewerbungskonto")
+        write(self.workspace.path("profil.json"), profile)
+        with ZipFile(chat_bundle(self.workspace, contact=True)) as bundle:
+            exported = json.loads(bundle.read("PROFIL.json"))["preferences"]
+            self.assertEqual(exported["contact"], "Person@example.org")
+            self.assertNotIn("salary", exported)
+        with ZipFile(chat_bundle(self.workspace, salary=True)) as bundle:
+            exported = json.loads(bundle.read("PROFIL.json"))["preferences"]
+            self.assertEqual(exported["salary"], "56000 EUR")
+            self.assertNotIn("contact", exported)
         with ZipFile(chat_bundle(self.workspace)) as bundle:
+            exported = json.loads(bundle.read("PROFIL.json"))["preferences"]
+            self.assertFalse({"contact", "mail", "salary"} & exported.keys())
             self.assertEqual(len(bundle.namelist()), 4)
             self.assertFalse(any(b"Ihre Bewerbung" in bundle.read(f) for f in bundle.namelist()))
             self.assertFalse(any(b"secret.txt" in bundle.read(f) for f in bundle.namelist()))

@@ -10,6 +10,8 @@ import shutil
 import struct
 import subprocess
 import tempfile
+import unicodedata
+from xml.dom import minidom
 from xml.etree import ElementTree as ET
 from xml.sax.saxutils import escape
 import zipfile
@@ -50,7 +52,8 @@ class Document:
 
 
 def prepare(workspace, kind, *, job_id=None, language='de', fact_ids=(), letter_date=None, recipient=(),
-            layout='ats', compact=False, photo=None, signature=None, page_two=None, portfolio=None):
+            layout='ats', compact=False, photo=None, signature=None, page_two=None, portfolio=None,
+            tags=(), max_facts=None):
     if language not in ('de', 'en') or kind not in ('lebenslauf', 'anschreiben'):
         raise ValueError('Sprache oder Dokumentart unbekannt.')
     if kind != 'anschreiben' and (letter_date or recipient):
@@ -60,6 +63,10 @@ def prepare(workspace, kind, *, job_id=None, language='de', fact_ids=(), letter_
     if ((photo and kind != 'lebenslauf') or (signature and kind != 'anschreiben')
             or ((photo or signature) and layout != 'design')):
         raise ValueError('Foto nur für den Design-Lebenslauf und Unterschrift nur für den Design-Brief verwenden.')
+    if tags and (kind != 'lebenslauf' or fact_ids):
+        raise ValueError('Tags für einen Lebenslauf ohne gleichzeitige Fakten-ID-Auswahl verwenden.')
+    if max_facts is not None and (not tags or max_facts < 1):
+        raise ValueError('--max-fakten benötigt --tag und eine positive Anzahl.')
     if kind != 'lebenslauf' and (page_two or portfolio):
         raise ValueError('Seitenwechsel und Portfolio-Link sind nur für Lebensläufe vorgesehen.')
     profile = workspace.profile()
@@ -109,9 +116,17 @@ def prepare(workspace, kind, *, job_id=None, language='de', fact_ids=(), letter_
         if job:
             prefix = 'Target position: ' if language == 'en' else 'Zielposition: '
             paragraphs += [prefix + job['role'] + ', ' + job['company']]
-            if not fact_ids:
+            if not fact_ids and not tags:
                 hits = keyword_match(profile, job['description'])['matched_fact_ids']
                 selected.sort(key=lambda i: i not in hits)
+        if tags:
+            def tag_key(value):
+                return unicodedata.normalize('NFKC', value.strip()).casefold()
+            wanted = {tag_key(text(t, 'Tag', 200)) for t in tags}
+            scores = {fid: len(wanted & {tag_key(k) for k in facts[fid].get('keywords', [])}) for fid in selected}
+            selected = sorted((fid for fid in selected if scores[fid]), key=scores.get, reverse=True)[:max_facts]
+            if not selected:
+                raise ValueError('Kein Profilfakt trägt eines der gewählten Tags.')
         groups = defaultdict(list)
         for fid in selected:
             fact = facts[fid]
@@ -294,6 +309,96 @@ def save(workspace, document):
     with workspace.locked():
         out = _next_path(workspace, document.stem)
         _render_file(out, document, document.compact)
+    return out
+
+
+def clean_draft(workspace, jid):
+    """Nur den im Arbeitsordner selbst erfassten Briefentwurf als neue Textdatei ausgeben."""
+    with workspace.locked():
+        draft = workspace.job(workspace.jobs(), jid).get('draft')
+        if not draft:
+            raise ValueError('Zuerst einen eigenen Anschreibenentwurf speichern.')
+        original = draft['text']
+        # Joiner können Eigennamen oder Emojis verändern. Nur definierte Kopierartefakte entfernen.
+        discard = dict.fromkeys(map(ord, '\u00ad\u200b\u2060\ufeff'))
+        result = original.translate(discard).replace('\r\n', '\n').replace('\r', '\n')
+        result = ''.join(' ' if c == '\t' or unicodedata.category(c) == 'Zs' else c for c in result)
+        if not result.strip():
+            raise ValueError('Nach der Bereinigung enthält der Entwurf keinen Text.')
+        stem = jid + '-entwurf-bereinigt'
+        out = workspace.path('dokumente', stem + '.txt')
+        version = 1
+        while out.exists():
+            version += 1
+            out = workspace.path('dokumente', f'{stem}-v{version}.txt')
+        _save_new(out, result.encode('utf-8'))
+    return out
+
+
+def clean_metadata(workspace, document, source, *, omit_author=False):
+    """Nur Metadaten einer lokal reproduzierbaren und unsignierten Fassung bearbeiten."""
+    name = Path(source)
+    path = workspace.path('dokumente', name) if name.parent == Path('.') else workspace.path(name)
+    expected_name = re.escape(document.stem) + r'(?:-bereinigt)?(?:-v[0-9]+)?'
+    if (path.parent != workspace.path('dokumente') or not re.fullmatch(expected_name, path.stem)
+            or path.suffix != '.docx' or not path.is_file()
+            or path.stat().st_size > 32 * 1024 * 1024):
+        raise ValueError('Eine selbst erzeugte DOCX-Datei aus dokumente/ angeben.')
+    core_part, app_part = 'docProps/core.xml', 'docProps/app.xml'
+    props_namespace = 'http://schemas.openxmlformats.org/package/2006/metadata/core-properties'
+    app_namespace = 'http://schemas.openxmlformats.org/officeDocument/2006/extended-properties'
+    remove = {core_part: {f'{{{props_namespace}}}lastModifiedBy', f'{{{props_namespace}}}revision',
+                          f'{{{props_namespace}}}lastPrinted'},
+              app_part: {f'{{{app_namespace}}}{key}' for key in ('Manager', 'Company', 'TotalTime', 'Template', 'AppVersion')}}
+    if omit_author:
+        remove[core_part].add('{http://purl.org/dc/elements/1.1/}creator')
+    with workspace.locked(), tempfile.TemporaryDirectory() as temp:
+        expected = Path(temp) / 'eigene-fassung.docx'
+        _render_file(expected, document, document.compact)
+        try:
+            with zipfile.ZipFile(expected) as own, zipfile.ZipFile(path) as original:
+                members = original.namelist()
+                if (len(set(members)) != len(members) or set(members) - set(own.namelist()) - {app_part}
+                        or set(own.namelist()) - set(members)
+                        or sum(m.file_size for m in original.infolist()) > 32 * 1024 * 1024):
+                    raise ValueError('Zusätzliche, signierte oder unbekannte Dokumentbestandteile. Original bleibt erhalten.')
+                for part in own.namelist():
+                    if part.startswith('word/') and original.read(part) != own.read(part):
+                        raise ValueError('Inhalt oder Layout stammt nicht exakt aus der gewählten eigenen Fassung.')
+                # Nur den zusätzlichen, lokalen OOXML-Eintrag für die erweiterten Eigenschaften erlauben.
+                for part, attr, target in [('_rels/.rels', 'Target', app_part), ('[Content_Types].xml', 'PartName', '/' + app_part)]:
+                    extra = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties' if attr == 'Target' else 'application/vnd.openxmlformats-officedocument.extended-properties+xml'
+                    standard = ET.fromstring(own.read(part))
+                    actual = ET.fromstring(original.read(part))
+                    for entry in list(actual):
+                        key = 'Type' if attr == 'Target' else 'ContentType'
+                        if (app_part in members and entry.get(attr) == target and entry.get(key) == extra
+                                and not entry.get('TargetMode')):
+                            actual.remove(entry)
+                    if actual.tag != standard.tag or [e.attrib for e in actual] != [e.attrib for e in standard]:
+                        raise ValueError('Unbekannte oder signierte Paketbeziehung. Original bleibt erhalten.')
+                output = BytesIO()
+                with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as clean:
+                    for part in members:
+                        payload = original.read(part)
+                        if part in remove:
+                            root = ET.fromstring(payload)
+                            if part == core_part:
+                                dc = '{http://purl.org/dc/elements/1.1/}'
+                                if root.findtext(dc + 'creator') != document.author or (root.findtext(dc + 'subject') or '') != document.job_id:
+                                    raise ValueError('Autor oder Stellenbezug stimmt nicht mit dem eigenen Dokument überein.')
+                            # Bezeichner, XML-Kommentare und Präfixe in typisierten Eigenschaften erhalten.
+                            with minidom.parseString(payload) as properties:
+                                element = properties.documentElement
+                                for node in list(element.childNodes):
+                                    if node.nodeType == node.ELEMENT_NODE and f'{{{node.namespaceURI}}}{node.localName}' in remove[part]:
+                                        element.removeChild(node)
+                                payload = properties.toxml(encoding='utf-8')
+                        clean.writestr(part, payload)
+        except (zipfile.BadZipFile, ET.ParseError, RuntimeError) as exc:
+            raise ValueError('Eigene DOCX-Datei oder ihre Eigenschaften sind nicht lesbar.') from exc
+        out = _next_path(workspace, document.stem + '-bereinigt')
+        _save_new(out, output.getvalue())
     return out
 
 

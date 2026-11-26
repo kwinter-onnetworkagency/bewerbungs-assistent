@@ -4,24 +4,54 @@ const path = require('node:path');
 const { createHash } = require('node:crypto');
 const { createRequire } = require('node:module');
 
+const reportType = 'portal_vorbereitung';
 const hints = {
-  vorname: /first.?name|given.?name|vorname/i, nachname: /last.?name|family.?name|surname|nachname/i,
-  email: /e.?mail/i, telefon: /telefon|phone|^tel$/i, portfolio: /portfolio|work.samples/i,
-  linkedin: /linkedin/i, gehalt: /salary|gehalt|compensation/i, start: /earliest.start|eintritt|available.from/i,
-  ort: /wohnort|address.level2|current.city/i, plz: /postleitzahl|postal.code/i,
+  vorname: ['vorname','first name','given name'], nachname: ['nachname','familienname','last name','surname','family name'],
+  email: ['email','e-mail','email address','e-mail-adresse','e-mail adresse'],
+  telefon: ['telefon','telefonnummer','phone','phone number'], portfolio: ['portfolio','portfolio url'],
+  linkedin: ['linkedin','linkedin url','linkedin profil'], ort: ['wohnort','current city'], plz: ['postleitzahl','plz','postal code'],
 };
+const autocompleteKeys = {'given-name':'vorname','family-name':'nachname',email:'email',tel:'telefon','address-level2':'ort','postal-code':'plz'};
+function sourceRef(raw) {
+  try {
+    const uri = new URL(raw);
+    const anchor = createHash('sha256').update(raw).digest('hex').slice(0,12);
+    return /^(http|https):$/.test(uri.protocol) ? uri.origin + '/… #' + anchor : '(eingebetteter Inhalt)';
+  } catch {return '(unbekannt)';}
+}
+
 async function discover(target) {
   const controls = target.locator('input:not([type=hidden]), textarea, select');
   const discovered = await controls.evaluateAll(nodes => nodes.map(n => ({
+    selektor: (() => {
+      const value = n.id ? '#'+CSS.escape(n.id) : n.name ? '[name='+CSS.escape(n.name)+']' : null;
+      return value && n.ownerDocument.querySelectorAll(value).length === 1 ? value : null;
+    })(),
     id: n.id, name: n.name, type: n.type, required: n.required,
-    label: Array.from(n.labels || [], l => l.textContent.trim()).join(' '),
+    label: Array.from(n.labels || [], l => l.textContent.trim()).join(' ') || n.getAttribute('aria-label') || '',
+    context: [n.getAttribute('aria-labelledby'), n.getAttribute('aria-label'),
+      ...Array.from(n.closest('form')?.querySelectorAll('fieldset') || []).filter(f=>f.contains(n))
+        .map(f=>f.querySelector(':scope > legend')?.textContent),
+      n.closest('section')?.querySelector('h1,h2,h3,h4')?.textContent,
+      ...Array.from((n.getAttribute('aria-labelledby') || '').split(/\s+/), id=>n.ownerDocument.getElementById(id)?.textContent),
+      ...Array.from((function*(el){while(el){yield el;el=el.parentElement;}})(n), el=>el.id+' '+el.className)
+    ].filter(Boolean).join(' '),
     autocomplete: n.autocomplete || '', accept: n.accept || '',
   })));
   for (const field of discovered) {
-    const desc = [field.id, field.name, field.autocomplete, field.label].join(' ');
-    const matches = Object.keys(hints).filter(k=>hints[k].test(desc));
-    field.vorschlag = matches.length === 1 ? matches[0] : null;
+    const label = field.label.toLowerCase().trim().replace(/[ *:]+$/g,'').trim();
+    const token = field.autocomplete.toLowerCase().trim();
+    const otherPerson = /notfall|emergency|referen|referee|third.party|dritt|ansprechperson|ansprechpartner|contact.person|supervisor|manager.?contact/i;
+    const byLabel = Object.keys(hints).find(k=>hints[k].includes(label));
+    const byToken = autocompleteKeys[token];
+    const excluded = otherPerson.test([field.label,field.context,field.id,field.name,token].join(' '));
+    field.vorschlag = !excluded && (!label || byLabel) && !(byLabel && byToken && byLabel !== byToken)
+      ? byLabel || byToken || null : null;
+    delete field.context;
   }
+  const counts = new Map();
+  for (const field of discovered) if (field.vorschlag) counts.set(field.vorschlag,(counts.get(field.vorschlag) || 0)+1);
+  for (const field of discovered) if (counts.get(field.vorschlag) > 1) field.vorschlag=null;
   return discovered;
 }
 
@@ -35,14 +65,14 @@ function checkedFile(file) {
 
 async function fillUploads(config, target, atJob) {
   if (!config.uploads.length) return;
-  const report = {dateien:[], hinweis:'Portalangaben betreffen einzelne Dateien. Die Einreichung prüfst du persönlich.'};
+  const report = {typ:reportType, dateien:[], hinweis:'Portalangaben betreffen einzelne Dateien. Die Einreichung prüfst du persönlich.'};
   const dest = path.join(config.output, 'uploads.json');
   const persist = () => {
     fs.writeFileSync(dest + '.tmp', JSON.stringify(report, null, 2), {mode:0o600});
     fs.renameSync(dest + '.tmp', dest);
   };
   const groups = config.uploads.map(group => {
-    const entries = group.files.map(file => ({name:file.name, sha256:file.sha256, feld:group.selector, status:'offen'}));
+    const entries = group.files.map(file => ({typ:reportType, name:file.name, sha256:file.sha256, feld:group.selector, status:'offen'}));
     report.dateien.push(...entries);
     return {group, entries};
   });
@@ -86,44 +116,50 @@ async function fillUploads(config, target, atJob) {
       }
     }
   } catch (error) {
-    report.fehler = error.message;
+    report.fehler = 'Dateiauswahl oder Quittungsprüfung fehlgeschlagen. Vor Wiederholung persönlich prüfen.';
     persist();
     throw error;
   }
 }
 
-async function fillFields(config, target, atJob, discovered) {
-  const explicit = new Set();
+async function fillFields(config, target, atJob) {
+  const completed = [];
+  const logPath = path.join(config.output,'befuellte-felder.json');
+  const persist = () => {
+    fs.writeFileSync(logPath+'.tmp',JSON.stringify({typ:reportType,felder:completed},null,2),{mode:0o600});
+    fs.renameSync(logPath+'.tmp',logPath);
+  };
+  const record = (selector, key) => {
+    // Ein frei gewählter Selektor kann eigene Werte oder Adressen enthalten.
+    const safe = /^[#.][a-zA-Z0-9_-]+$/.test(selector) || /^\[(?:id|name)=[a-zA-Z0-9_-]+\]$/.test(selector);
+    completed.push({selektor:safe ? selector : 'sha256:'+createHash('sha256').update(selector).digest('hex'), schluessel:key});
+    persist();
+  };
+  persist();
   for (const field of config.fields) {
     atJob();
     const input = target.locator(field.selector);
-    explicit.add(await input.evaluate(n=>n.id || n.name));
+    if (await input.count() !== 1) throw Error('Bestätigter Selektor bezeichnet kein eindeutiges Formularfeld.');
+    if (field.key && field.key !== 'explizit') {
+      const previous = await input.inputValue();
+      if (previous && previous !== field.value) throw Error('Bestätigtes Feld enthält bereits einen anderen Wert. Persönlich prüfen.');
+    }
     const type = await input.evaluate(n => n instanceof HTMLTextAreaElement ? 'textarea' :
       n instanceof HTMLSelectElement ? 'select' : n instanceof HTMLInputElement ? n.type : '');
     if (type === 'select') await input.selectOption(field.value);
     else if (['textarea','text','email','tel','number','url','date','search'].includes(type)) await input.fill(field.value);
     else throw Error('Dieses Feld erfordert manuelle Eingabe im Portal.');
+    record(field.selector, field.key || 'explizit');
   }
-  for (const f of discovered) {
-    if (!f.vorschlag || !Object.hasOwn(config.personal || {},f.vorschlag) || explicit.has(f.id || f.name) ||
-        (!f.id && !f.name) || !['text','email','tel','url','number','textarea','date'].includes(f.type)) continue;
-    atJob();
-    const attr = f.id ? 'id' : 'name';
-    const key = f.id || f.name;
-    const escaped = await target.evaluate(value=>CSS.escape(value),key);
-    const input = target.locator('['+attr+'='+escaped+']');
-    if (await input.count() === 1 && await input.isEditable() && !await input.inputValue())
-      await input.fill(config.personal[f.vorschlag]);
-  }
+
 }
 
 async function prepare(config, context) {
   const page = await context.newPage();
   await page.goto(config.url, { waitUntil: 'domcontentloaded' });
   if (config.profile) {
-    const rl = require('node:readline/promises').createInterface({input:process.stdin,output:process.stdout});
-    try {await rl.question('Persönlich anmelden, das richtige Formular öffnen und hier Eingabe drücken. ');}
-    finally {rl.close();}
+    console.log('Persönlich anmelden, das richtige Formular öffnen und im Playwright-Inspektor Fortsetzen wählen.');
+    await page.pause();
   }
   if (config.frame && !page.frames().some(f => f.url() === config.frame)) {
     await page.waitForEvent('framenavigated', {predicate:f=>f.url() === config.frame});
@@ -144,12 +180,12 @@ async function prepare(config, context) {
   const frames = [];
   if (config.mode === 'erkunden') {
     for (const frame of page.frames().filter(f => f !== page.mainFrame())) {
-      try { frames.push({url:frame.url(), fields:await discover(frame)}); }
-      catch { frames.push({url:frame.url(), hinweis:'Rahmen beim Lesen nicht verfügbar.'}); }
+      try { frames.push({url:sourceRef(frame.url()), fields:await discover(frame)}); }
+      catch { frames.push({url:sourceRef(frame.url()), hinweis:'Rahmen beim Lesen nicht verfügbar.'}); }
     }
   }
   fs.writeFileSync(path.join(config.output, 'felder.json'),
-    JSON.stringify({url:page.url(), rahmen_url:config.frame || null, fields:discovered, frames}, null, 2),
+    JSON.stringify({typ:reportType,url:sourceRef(page.url()), rahmen_url:config.frame ? sourceRef(config.frame) : null, fields:discovered, frames}, null, 2),
     {flag:'wx', mode:0o600});
   if (config.mode === 'ausfuellen') {
     atJob();
@@ -164,7 +200,7 @@ async function prepare(config, context) {
       };
     });
     try {
-      await fillFields(config, target, atJob, discovered);
+      await fillFields(config, target, atJob);
       await fillUploads(config, target, atJob);
       atJob();
     } finally {
@@ -172,12 +208,15 @@ async function prepare(config, context) {
       await guard.dispose();
     }
   }
-  await page.screenshot({path:path.join(config.output,'vorschau.png'), fullPage:true});
+  const screenshot = path.join(config.output,'vorschau.png');
+  fs.closeSync(fs.openSync(screenshot,'wx',0o600));
+  await page.screenshot({path:screenshot, fullPage:true});
+  fs.chmodSync(screenshot,0o600);
   return page;
 }
 
 async function main() {
-  const config = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+  const config = JSON.parse(fs.readFileSync(0, 'utf8'));
   let chromium;
   try { ({chromium} = createRequire(path.join(process.cwd(),'portal-local.cjs'))('playwright')); }
   catch { throw Error('Im persönlichen Ordner Playwright installieren. Siehe docs/PORTAL.md.'); }
@@ -192,4 +231,4 @@ async function main() {
   } finally {await context.close(); if(browser)await browser.close();}
 }
 module.exports = {prepare};
-if(require.main === module) main().catch(e=>{console.error(e.message);process.exitCode=1;});
+if(require.main === module) main().catch(()=>{console.error('Portalvorbereitung fehlgeschlagen. Feldbericht, Browserinstallation und Portalzustand prüfen.');process.exitCode=1;});
