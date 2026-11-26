@@ -3,6 +3,7 @@ import base64
 from datetime import date, datetime, timezone
 from decimal import Decimal
 from difflib import unified_diff
+import hashlib
 from html import unescape
 from html.parser import HTMLParser
 import json
@@ -290,13 +291,136 @@ def search(workspace, args):
     return path
 
 
+STRUCTURE = ("titel", "senioritaet", "ort", "sprache", "gehalt", "erfahrung", "musskriterium")
+STOP_WORDS = set("""aber als also am an and are at auf aus bei bieten by das dem den der des die du durch ein eine
+einem einen einer eines erfahrung erfahrungen experience for from fuer für haben has im in ist it
+job kann mit nach oder of on our position role seeking sie sind sowie suchen that the to und uns unser unsere
+unserem unseren unserer unter von we welche werden who wie wir with wird you your zum zur""".split())
+
+
+def tokens(value):
+    return {w for w in re.findall(r"[^\W_]+", value.casefold()) if len(w) >= 3 and not w.isdigit() and w not in STOP_WORDS}
+
+
+def assessment_source(profile, job):
+    prefs = profile.get("preferences", {})
+    relevant = {k: v for k, v in prefs.items() if k in ("seniority", "salary", "work_model", "mobility", "must_haves", "exceptions")}
+    basis = [job["description"], job["role"], profile.get("location"), profile["facts"], relevant, profile["target_roles"]]
+    return hashlib.sha256(json.dumps(basis, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+
+
+def record_structure(workspace, a):
+    quote_text = text(a.anzeige, "Anzeigenpassage")
+    reason = text(a.grund, "Abgleich und Grundlage")
+    name = text(a.name or a.kriterium, "Kriterium", 180)
+    years = a.gefordert_jahre, a.belegt_jahre
+    if any(n is not None for n in years):
+        if (a.kriterium != "erfahrung" or not a.fakt or any(n is None or n < 0 for n in years)):
+            raise ValueError("Erfahrungsjahre benötigen beide Werte und eine belegte Fakten-ID.")
+        calculated = "passt" if years[1] >= years[0] else "luecke"
+        if a.urteil and a.urteil not in (calculated, "ausnahme"):
+            raise ValueError("Das Urteil widerspricht den angegebenen Erfahrungsjahren.")
+        verdict = a.urteil or calculated
+    else:
+        verdict = a.urteil
+    if verdict is None:
+        raise ValueError("Prüfurteil oder belegten Jahresvergleich angeben.")
+    with workspace.locked():
+        jobs = workspace.jobs()
+        job = workspace.job(jobs, a.id)
+        profile = workspace.profile()
+        if " ".join(quote_text.split()) not in " ".join(job["description"].split()):
+            raise ValueError("Anzeigenpassage fehlt im aktuellen Originaltext.")
+        if set(a.fakt) - {f["id"] for f in profile["facts"]}:
+            raise ValueError("Fakten-ID fehlt im Profil.")
+        if a.kriterium in ("musskriterium", "erfahrung") and verdict in ("passt", "luecke") and not a.fakt:
+            raise ValueError("Belegte Passung oder Lücke benötigt eine passende bestätigte Fakten-ID.")
+        row = dict(kriterium=a.kriterium, name=name, urteil=verdict, anzeige=quote_text, grund=reason,
+                   fakten=list(dict.fromkeys(a.fakt)), basis=assessment_source(profile, job))
+        if years[0] is not None:
+            row.update(gefordert_jahre=years[0], belegt_jahre=years[1])
+        history = job.setdefault("strukturpruefungen", [])
+        previous = next((r for r in reversed(history) if (r["kriterium"], r["name"]) == (a.kriterium, name)), {})
+        if any(previous.get(k) != v for k, v in row.items()) or ("gefordert_jahre" in previous) != ("gefordert_jahre" in row):
+            history.append(dict(row, erfasst=now()))
+            write(workspace.path("bewerbungen.json"), jobs)
+
+
+def experience_checks(profile, job):
+    fields = profile.get("preferences", {}).get("erfahrungsfelder", {})
+    if not isinstance(fields, dict):
+        raise ValueError("erfahrungsfelder benötigt Namen mit zugehörigen Begriffen.")
+    results = []
+    for name, terms in fields.items():
+        if not isinstance(terms, list) or not choice_list(terms):
+            raise ValueError("Ein Erfahrungsfeld benötigt mindestens einen Begriff.")
+        terms_re = "|".join(re.escape(term) for term in terms)
+        years = rf"(\d{{1,2}})\+?\s+(?:Jahre[n]?|years?)\s+(?:(?:mit|in|of)\s+)?(?:{terms_re})\b"
+        def collect(value, prefix):
+            matches = []
+            for sentence in re.split(r"[.!?;\n]", value):
+                if re.search(r"\b(?:kein\w*|nicht|wünschenswert|höchstens|optional|preferred|not|pluspunkt)\b", sentence, re.I):
+                    continue
+                matches.extend((int(m[1]), m[0]) for m in re.finditer(prefix + years, sentence, re.I))
+            return matches
+        requested = collect(job["description"], r"\b(?:mindestens|minimum of|at least)\s+")
+        if not requested:
+            continue
+        required, phrase = max(requested)
+        proofs = [(years, f["id"]) for f in profile["facts"] for years, _ in collect(f["text"], r"(?<![\w.,])")]
+        proven = max((n for n, _ in proofs), default=None)
+        verdict = "offen" if proven is None else ("passt" if proven >= required else "luecke")
+        results.append(dict(kriterium="erfahrung", name=name, urteil=verdict, aktuell=True, anzeige=phrase,
+                            grund="Vergleich ausdrücklich genannter Mindest- und belegter Erfahrungsjahre.",
+                            geforderte_basis="ausdrueckliche_mindestanforderung", gefordert_jahre=required,
+                            belegt_jahre=proven, fakten=[fid for n, fid in proofs if n == proven], automatisch=True))
+    return results
+
+
+def structure(profile, job, title_hit):
+    configured = profile.get("preferences", {}).get("strukturgewichte", {})
+    if (not isinstance(configured, dict) or configured.keys() - set(STRUCTURE) or
+            any(type(n) is not int or not 0 <= n <= 100 for n in configured.values())):
+        raise ValueError("strukturgewichte benötigt bekannte Faktoren mit ganzzahligen Gewichten von 0 bis 100.")
+    weights = {k: configured.get(k, 1) for k in STRUCTURE}
+    scores = {"titel": 100 if title_hit else 0} if profile["target_roles"] else {}
+    result = []
+    source = assessment_source(profile, job)
+    latest = {(r["kriterium"], r["name"]): r for r in job.get("strukturpruefungen", [])}
+    for item in experience_checks(profile, job):
+        latest.setdefault(("erfahrung", item["name"]), dict(item, basis=source))
+    for factor in STRUCTURE[1:]:
+        values = []
+        for (key, _), row in latest.items():
+            if key != factor:
+                continue
+            fresh = source == row["basis"]
+            verdict = row["urteil"] if fresh else "offen"
+            result.append({**{k: v for k, v in row.items() if k != "basis"}, "urteil": verdict, "aktuell": fresh})
+            if verdict != "offen":
+                values.append(0 if verdict == "luecke" else 100)
+        if values:
+            scores[factor] = sum(values) / len(values)
+    denominator = sum(weights[k] for k in scores)
+    value = round(sum(scores[k] * weights[k] for k in scores) / denominator) if denominator else None
+    unknown = [k for k in STRUCTURE if weights[k] and k not in scores]
+    return dict(wert=value, gewichte=weights, faktorwerte=scores, offen=unknown, pruefungen=result)
+
+
 def fit(profile, job):
     match = keyword_match(profile, job["description"])
     roles = profile["target_roles"]
     title_hit = [role for role in roles if words_match([role], job["role"])]
     parts = {}
-    if match["keyword_score"] is not None:
-        parts["faktenabgleich"] = match["keyword_score"]
+    ad_terms = tokens(job["description"])
+    cv_terms = set()
+    for fact in profile["facts"]:
+        translations = fact.get("translations")
+        translated = (t for t in translations.values() if isinstance(t, str)) if isinstance(translations, dict) else ()
+        for phrase in (fact["text"], *fact.get("keywords", []), *translated):
+            cv_terms.update(tokens(phrase))
+    if ad_terms and cv_terms:
+        parts["faktenabgleich"] = round(100 * len(ad_terms & cv_terms) / len(ad_terms))
     skills = {f["id"]: f for f in profile["facts"] if f.get("kind") == "skill"}
     skill_hits = []
     corpus = job["description"].casefold()
@@ -306,21 +430,24 @@ def fit(profile, job):
             skill_hits.append(fid)
     if skills:
         parts["kompetenzen_im_text"] = round(100 * len(skill_hits) / len(skills))
-    if roles:
-        parts["zielrolle_im_titel"] = 100 if title_hit else 0
-    weights = {"faktenabgleich": 55, "kompetenzen_im_text": 25, "zielrolle_im_titel": 20}
+    reviewed = structure(profile, job, title_hit)
+    if reviewed["wert"] is not None:
+        parts["struktur"] = reviewed["wert"]
+    weights = {"faktenabgleich": 55, "kompetenzen_im_text": 25, "struktur": 20}
     auto = None
-    if match["keyword_score"] is not None or skills:
+    if "faktenabgleich" in parts or skills:
         auto = round(sum(v * weights[k] for k, v in parts.items()) / sum(weights[k] for k in parts))
     manual = job.get("score_manual")
     if manual is not None and (type(manual) is not int or not 0 <= manual <= 100):
         raise ValueError("Ungültiger gespeicherter manueller Score.")
     return dict(id=job["id"], score=manual if manual is not None else auto, score_manuell=manual,
                 begruendung_manuell=job.get("score_reason"), score_automatisch=auto, anteile=parts,
+                struktur=reviewed, anzeigenbegriffe_im_cv=sorted(ad_terms & cv_terms),
+                anzeigenbegriffe_ohne_worttreffer=sorted(ad_terms - cv_terms),
                 zielrollentreffer=title_hit, kompetenztreffer=skill_hits, fakten_treffer=match["matched_fact_ids"],
                 fakten_ohne_worttreffer=match["unmatched_fact_ids"], kriterien_zur_pruefung={
                     k: v for k, v in profile.get("preferences", {}).items()
-                    if k in ("must_haves", "salary", "mobility", "work_model") and v})
+                    if k in ("must_haves", "salary", "mobility", "work_model", "seniority", "exceptions") and v})
 
 
 def atlas(kldb, region, level):
@@ -382,6 +509,16 @@ def register(commands):
     group = score.add_mutually_exclusive_group(required=True)
     group.add_argument("--id")
     group.add_argument("--alle", action="store_true")
+    check = commands.add_parser("strukturcheck", help="Strukturfaktor, Erfahrungslücke oder persönliche Stellenausnahme belegen")
+    check.add_argument("id")
+    check.add_argument("--kriterium", choices=STRUCTURE[1:], required=True)
+    check.add_argument("--name", help="Eine einzelne Anforderung innerhalb des Faktors benennen")
+    check.add_argument("--anzeige", required=True, help="Wörtliche Passage der gespeicherten Anzeige")
+    check.add_argument("--grund", required=True, help="Persönliche Grundlage der Prüfung oder bewussten Ausnahme")
+    check.add_argument("--urteil", choices=("passt", "luecke", "offen", "ausnahme"))
+    check.add_argument("--fakt", action="append", default=[])
+    check.add_argument("--gefordert-jahre", type=int)
+    check.add_argument("--belegt-jahre", type=int)
     pay = commands.add_parser("entgeltatlas", help="Regionale Bruttomonatswerte direkt bei der BA abrufen")
     pay.add_argument("--kldb", required=True)
     pay.add_argument("--region", type=int, default=1, help="Regions-ID der Quelle, 1 steht für Deutschland")
@@ -546,6 +683,9 @@ def run(args, workspace):
             fields["description"] = text(args.textdatei.read_text(encoding="utf-8-sig"), "Volltext", 200000)
         print(json.dumps(save_observation(workspace, args.id, args.zustand, args.quelle, args.beleg, fields, args.uebernehmen),
                          ensure_ascii=False, indent=2))
+    elif args.command == "strukturcheck":
+        record_structure(workspace, args)
+        print("Strukturprüfung gespeichert.")
     elif args.command == "passung":
         jobs = workspace.jobs()
         profile = workspace.profile()

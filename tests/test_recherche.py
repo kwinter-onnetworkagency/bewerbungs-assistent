@@ -224,3 +224,37 @@ class RechercheTest(unittest.TestCase):
         self.assertEqual(current["anzeigenstaende"][-1]["ersetzter_volltext"], job["description"])
         self.assertEqual([s["zustand"] for s in current["anzeigenstaende"]], ["zugang_offen", "geschlossen", "offen"])
         self.assertEqual(current["events"], [])
+
+    def test_structure_unknown_experience_gap_exception_and_profile_revision(self):
+        job = self.w.add("B", "Disposition", "https://example.org/str", "Mindestens 5 Jahre Führungserfahrung. Standort Bonn.")[0]
+        profile = self.w.profile()
+        profile["facts"] = [{"id": "f1", "text": "3 Jahre Führungserfahrung", "source": "Tätigkeitsnachweis", "keywords": ["Führungserfahrung"]}]
+        profile["preferences"] = {"erfahrungsfelder": {"leitung": ["Führungserfahrung"]},
+                                  "strukturgewichte": {"titel": 1, "erfahrung": 3, "ort": 2}}
+        write(self.w.path("profil.json"), profile)
+        score = json.loads(self.command("passung", "--id", job["id"]))[0]
+        structure = score["struktur"]
+        self.assertEqual(structure["wert"], 25)
+        self.assertIn("gehalt", structure["offen"])
+        gap = structure["pruefungen"][0]
+        self.assertEqual((gap["urteil"], gap["gefordert_jahre"], gap["belegt_jahre"], gap["fakten"]), ("luecke", 5, 3, ["f1"]))
+        self.assertIn("standort", score["anzeigenbegriffe_ohne_worttreffer"])
+        self.assertIn("führungserfahrung", score["anzeigenbegriffe_im_cv"])
+        self.command("strukturcheck", job["id"], "--kriterium", "ort", "--anzeige", "Standort Bonn", "--urteil", "ausnahme",
+                     "--grund", "Für diese Stelle persönlich akzeptiert.")
+        self.command("strukturcheck", job["id"], "--kriterium", "erfahrung", "--name", "leitung",
+                     "--anzeige", "5 Jahre Führungserfahrung", "--grund", "Bestätigter Tätigkeitszeitraum.",
+                     "--gefordert-jahre", "5", "--belegt-jahre", "3", "--fakt", "f1")
+        with self.assertRaisesRegex(ValueError, "Fakten-ID"):
+            self.command("strukturcheck", job["id"], "--kriterium", "musskriterium", "--anzeige", "5 Jahre",
+                         "--urteil", "luecke", "--grund", "Ungeprüft")
+        self.w.score(job["id"], 0, "Bewusster Ausschluss")
+        final = json.loads(self.command("passung", "--id", job["id"]))[0]
+        self.assertEqual(final["score"], 0)
+        self.assertEqual(final["struktur"]["wert"], 50)
+        profile["facts"] = []
+        write(self.w.path("profil.json"), profile)
+        stale = json.loads(self.command("passung", "--id", job["id"]))[0]
+        self.assertEqual(stale["score"], 0)
+        self.assertTrue(all(x["urteil"] == "offen" for x in stale["struktur"]["pruefungen"]))
+        self.assertEqual(r.experience_checks(profile, {**job, "description": "Nicht mindestens 5 Jahre Führungserfahrung notwendig."}), [])

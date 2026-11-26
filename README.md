@@ -20,6 +20,8 @@ Wähle deinen Assistenten, gib deinen Namen ein und wähle einen neuen privaten 
 
 | Was möchtest du tun? | Claude Code oder Nachricht im Chat-Projekt | Codex-Skill |
 |---|---|---|
+| Komplette Bewerbung vorbereiten | `/bewerbung` | `$bewerbung` |
+| LinkedIn-Profil abgleichen | `/linkedin` | `$linkedin` |
 | Persönliches Profil aufbauen | `/interview` | `$interview` |
 | Passende Stellen prüfen | `/stellensuche` | `$stellensuche` |
 | Anschreiben entwerfen | `/anschreiben` | `$anschreiben` |
