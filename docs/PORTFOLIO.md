@@ -64,7 +64,7 @@ Auch ohne Agenturkonto kannst du bei [Cloudflare direkt nach einer Domain suchen
 
 **Bei on:NetworkAgency registrieren**
 
-1. Gib im Wizard auf Wunsch deinen Domainnamen ein. Mit Kundenkonto öffne den erzeugten Direktlink zum [Bestellformular](https://customer.onnetwork.agency/portal/domains/new) und melde dich an. Der Link übernimmt den gewünschten Namen in die Suche. Wenn du neu bist, frage über den [Kontakt der Agentur](https://onnetwork.agency/kontakt/) deine Wunschdomain und ein Angebot mit Verlängerungspreis an.
+1. Gib im Wizard auf Wunsch deinen Domainnamen ein. Mit Kundenkonto öffne den erzeugten Direktlink zum [Bestellformular](https://customer.onnetwork.agency/portal/domains/new) und melde dich an. Der Link übernimmt den gewünschten Namen in die Suche. Wenn du neu bist, [erstelle ein Kundenkonto](https://customer.onnetwork.agency/registration) mit deiner E-Mail-Adresse. Öffne den Bestätigungslink und rufe dann den Bestelllink aus dem Wizard auf.
 2. Prüfe den Namen und die Endung und starte die Suche. Prüfe vor dem Kauf den angezeigten Preis, die Laufzeit, den Verlängerungspreis und die Zahlungsmethode. Bestätige die Bestellung selbst. [Bestellanleitung](https://docs.onnetwork.agency/domains/)
 3. Für eine Subdomain folge Abschnitt 6. Für die Hauptdomain kläre beim Anbieter die Delegation auf die Nameserver deines eigenen Cloudflare-Kontos und folge Abschnitt 5.
 

@@ -7,7 +7,7 @@ Du kannst mit einem Chat-Projekt beginnen oder einen lokalen Arbeitsordner einri
 Mit [Node.js ab 20 samt npm](https://nodejs.org/) und [Git](https://git-scm.com/downloads) starte im Terminal:
 
 ```sh
-npx github:kwinter-onnetworkagency/bewerbungs-assistent#v0.6.0
+npx github:kwinter-onnetworkagency/bewerbungs-assistent#v1.0.0
 ```
 
 Das persönliche Portfolio ist mit **Ja** voreingestellt. Danach fragt der Wizard, ob du eine eigene Domain besitzt. Du kannst eine vorhandene Domain verbinden, eine neue bei on:NetworkAgency oder Cloudflare registrieren oder mit einer kostenlosen Pages-Adresse starten. [Portfolio einrichten](PORTFOLIO.md)
@@ -22,7 +22,7 @@ Die [Funktionsübersicht](FUNKTIONSUMFANG.md) enthält alle Kurzbefehle von der 
 
 Dieser Weg braucht keine lokale Installation und keinen API-Schlüssel.
 
-1. Lade das Repository als ZIP herunter und entpacke es. Öffne den Ordner `resources`.
+1. Lade das [Installationspaket für Version 1.0.0](https://github.com/kwinter-onnetworkagency/bewerbungs-assistent/releases/download/v1.0.0/Bewerbungs-Assistent-v1.0.0.zip) herunter und entpacke es. Öffne den Ordner `resources`.
 2. Erstelle in deinem eigenen ChatGPT- oder Claude-Konto ein **privates** Projekt, etwa „Meine Bewerbungen“. Teile dieses Projekt nicht mit der Lerngruppe: Hier liegen später deine eigenen Unterlagen.
 3. Übernimm den Text aus `ASSISTENT.txt` in die Projektanweisungen. Lade `INTERVIEW.md` als Projektdatei hoch. Wenn dein Konto keine Projekte anbietet, kannst du beide Texte am Anfang eines privaten Chats bereitstellen; prüfe dann den Kontext bei jedem neuen Chat erneut.
 4. Schreibe `/interview`. Der Assistent stellt jeweils eine Frage und legt dir dein Profil zur Prüfung vor.
@@ -50,7 +50,7 @@ Python 3.11 oder neuer. Installation: [python.org](https://www.python.org/downlo
 | Geschützte Portfoliofassung erzeugen | Node.js und ein eingerichtetes persönliches Portfolio. Die Veröffentlichung erfolgt über dein statisches Hosting. [Portfolio](PORTFOLIO.md) |
 | Suchlauf und Gehaltsabruf | Internetzugang. Für die direkten Dienste der Bundesagentur eigene Zugangsdaten über `BA_JOBSUCHE_API_KEY` und `BA_ENTGELTATLAS_API_KEY` lokal bereitstellen. Greenhouse-Boards können einzeln gewählt werden. [Recherche](RECHERCHE.md) |
 | Apple Mail bedienen | macOS, eingerichtetes persönliches Mailkonto und die vom System angefragte Automationserlaubnis. Ohne Apple Mail lassen sich bereitgestellte EML-Dateien mit `mail-erfassen` auswerten. |
-| Kalender und Adressbuch | ICS- bzw. VCF-Import in der persönlichen App. Für benannte Zeitzonen werden zugängliche IANA-Zeitzonendaten benötigt. [Termine](TERMINE.md) |
+| Kalender und Adressbuch | ICS- bzw. VCF-Import in der persönlichen App oder unter macOS direkter Eintrag mit `--mac` und App-Berechtigung. Für benannte Zeitzonen werden zugängliche IANA-Zeitzonendaten benötigt. Auf Windows bei fehlenden Zeitzonendaten `py -3 -m pip install tzdata` in der verwendeten Python-Umgebung ausführen. [Termine](TERMINE.md) |
 
 ### macOS
 
@@ -110,10 +110,10 @@ Der Einrichtungsassistent installiert weder Codex noch Kontoverbindungen oder Au
 
 ## Aktualisieren und sichern
 
-Wenn du bereits mit einer lokalen 0.5.x-Installation arbeitest, beende laufende Bewerbungsbefehle, Routinen und offene Browserprofile. Schließe auch Editoren, die automatisch speichern. Sichere den bisherigen Ordner privat. Ersetze beide Beispielpfade durch deine Ordner. Das Ziel muss neu sein und außerhalb der Quelle sowie außerhalb eines Git-Repositories liegen.
+Wenn du bereits mit einer bestehenden lokalen Installation (zum Beispiel 0.5.x oder 0.6.x) arbeitest, beende laufende Bewerbungsbefehle, Routinen und offene Browserprofile. Schließe auch Editoren, die automatisch speichern. Sichere den bisherigen Ordner privat. Ersetze beide Beispielpfade durch deine Ordner. Das Ziel muss neu sein und außerhalb der Quelle sowie außerhalb eines Git-Repositories liegen.
 
 ```sh
-npx github:kwinter-onnetworkagency/bewerbungs-assistent#v0.6.0 aktualisieren --von "/Pfad/Mein-Bewerbungsprojekt" --ziel "/Pfad/Mein-Bewerbungsprojekt-0.6"
+npx github:kwinter-onnetworkagency/bewerbungs-assistent#v1.0.0 aktualisieren --von "/Pfad/Mein-Bewerbungsprojekt" --ziel "/Pfad/Mein-Bewerbungsprojekt-1.0"
 ```
 
 Der Befehl installiert die neue Werkzeugfassung neben dem bisherigen Arbeitsordner. Er übernimmt die Originaldateien von Profil, Interview, bisherigen Bewerbungen, Belegen, Unterlagen, Portal-, Mail- und Gesprächsdaten sowie deiner eigenen Portfolioseite. Auch selbst angelegte Dateien werden kopiert. Bestehende Exporte bleiben als bisheriger Stand erhalten. Die interne Kennung des Arbeitsordners bleibt erhalten. Während der Übernahme gilt im alten Ordner die normale temporäre Schreibsperre. Symbolische Links, Sonderdateien und verschachtelte Git-Verzeichnisse werden mit einem Hinweis abgewiesen. Trenne solche externen Verweise vor einem erneuten Versuch in einer privaten Kopie.

@@ -2,6 +2,6 @@
 
 Keine Zugangsdaten, echten Bewerbungen oder persönlichen Unterlagen in öffentliche Issues posten. Melde reproduzierbare Programmfehler mit fiktiven Daten. Für vertrauliche Sicherheitsbefunde verwende die private Sicherheitsmeldung im Security-Bereich des Repositories, sofern GitHub sie für dich anbietet.
 
-Das Werkzeug speichert lokal. Es verschlüsselt keine Dateien und kontrolliert keine Cloud-Synchronisation deines Zielordners. Chat-Uploads erfolgen ausschließlich durch dich und nach den Bedingungen deines Dienstes. Prüfe den Export vor dem Hochladen.
+Der persönliche Arbeitsordner und seine Sicherungen enthalten lesbare Dateien. Prüfe deshalb, wer auf den Ordner zugreifen kann und welche Cloud-Dienste ihn synchronisieren. Bei geschützten Empfängerseiten verschlüsselt der Assistent die ausgewählten Inhalte einschließlich eines beigefügten Lebenslaufs. Bewahre den zugehörigen Schlüssel getrennt von den veröffentlichten Dateien auf. Chat-Uploads erfolgen ausschließlich durch dich und nach den Bedingungen deines Dienstes. Prüfe den Export vor dem Hochladen.
 
 Anzeigen und Mails können Anweisungen enthalten, die nicht zu deinem Auftrag gehören. Die Projektvorlagen behandeln sie als Quelldaten. Keine Passwörter oder persönlichen Zugriffscodes in Profilantworten hinterlegen.
