@@ -1,6 +1,6 @@
 # Mein Bewerbungsarbeitsplatz
 
-Öffne `exports/Dashboard.html` aus deinem persönlichen Ordner. Für den ersten Blick kannst du im Menü **Arbeitsstand laden** die fiktive Datei [Beispiel-Arbeitsstand](https://github.com/kwinter-onnetworkagency/bewerbungs-assistent/releases/download/v0.5.1/dashboard-demo.json) auswählen. Bei einer lokalen Installation lädt dasselbe Menü deine eigene `bewerbungen.json`. Das Laden erfolgt im Browser auf deinem Gerät. Die mit persönlichen Daten erzeugte HTML-Datei gehört in deinen privaten Ordner.
+Öffne `exports/Dashboard.html` aus deinem persönlichen Ordner. Für den ersten Blick kannst du im Menü **Arbeitsstand laden** die fiktive Datei [Beispiel-Arbeitsstand](https://github.com/kwinter-onnetworkagency/bewerbungs-assistent/releases/download/v0.6.0/dashboard-demo.json) auswählen. Bei einer lokalen Installation lädt dasselbe Menü deine eigene `bewerbungen.json`. Das Laden erfolgt im Browser auf deinem Gerät. Die mit persönlichen Daten erzeugte HTML-Datei gehört in deinen privaten Ordner.
 
 | Ansicht | Wofür du sie verwendest |
 |---|---|
@@ -11,6 +11,21 @@
 | Auswertung | Die Anzahl eindeutiger Vorgänge je aktuellem Status vergleichen. Mehrere Nachrichten zu einer Stelle zählen als ein Vorgang. |
 
 Beim Aufruf von `/bericht` soll der lokale Assistent das Dashboard, Markdown und CSV gemeinsam aktualisieren. Ohne lokale Werkzeuge zeigst du den Stand direkt im Chat. Für die HTML-Ansicht lade die neutrale Dashboard-Datei aus dem Release und wähle den freigegebenen JSON-Arbeitsstand auf deinem Gerät. Ein gekürzter Chat-Export enthält weniger Details als der lokale Arbeitsstand.
+
+## Private Stellenmappen und Berichte
+
+Mit `python start.py bericht` erhältst du im Ordner `exports` auch die folgenden HTML-Dateien. Du kannst sie direkt öffnen und drucken. Öffne die Dateien am ursprünglichen Ort, damit die relativen Links auf deine lokalen Unterlagen funktionieren.
+
+| Datei | Inhalt |
+|---|---|
+| `Screening.html` | Stellen, Anzeigenlinks, manueller Score, Begründungen und Screeningnotizen mit ihren Quellen |
+| `Pakete.html` | Je Stelle alle Paketfassungen mit eingereichten oder lokal vorbereiteten PDFs, Originalquellen, Seitenbereichen und Auslassungen |
+| `Stelle-STELLEN-ID.html` | Stellenanzeige, Einschätzung, Notizen, lokale Entwurfsfassungen und Prüfungen, Nachweise, Empfangsbestätigungen und Versandzuordnung |
+| `Kohorten.html` | Je Vorlage, Version und Versandkanal die belegten Einreichungen, heutigen Status, Alter und verlinkten Einzelfälle |
+
+Ein Versand ohne belegte Fassungszuordnung bleibt in der Gruppe „unbekannt“. Für jeden Vorgang zählt die erste belegte, bereits erfolgte Einreichung. Eine Eingangsbestätigung allein erzeugt keine Einreichung und erhöht die Zahl der Interviews oder Zusagen nicht. Die Gruppe beschreibt den Stand zu diesem Zeitpunkt. Unterschiede bei Rollen und Beobachtungsdauer beeinflussen den Vergleich.
+
+Die Stellenmappe öffnest du auch aus der Detailansicht im Dashboard. Bei geänderten oder fehlenden Dateien entfallen deren Downloadlinks. Ein Markdown-Bericht und die CSV-Tabelle stehen daneben für eigene Auswertungen bereit. Private Mappen und Originalbelege bleiben außerhalb des Vier-Dateien-Chat-Exports.
 
 ## Von der Suche zum Tagesbericht
 

@@ -8,6 +8,30 @@ Der Wizard fragt einmal: **Möchtest du auch ein persönliches Portfolio erstell
 
 **Alles im Upload-Ordner wird öffentlich abrufbar**, auch unverlinkte Dateien. Lege dort nur die freigegebene Seite und ihre öffentlichen Bilder oder Dokumente ab. Bewerbungsdashboard, Nachweise, Postfachdaten und Zugangsdaten gehören in den privaten Arbeitsordner.
 
+### Öffentliche Fakten und Arbeitsproben auswählen
+
+Führe im persönlichen Arbeitsordner den folgenden Befehl mit deinen geprüften Fakten-IDs und Links aus. Kontaktangaben, Nachweisquellen und übrige Profilfakten werden nur öffentlich, wenn du ihren Inhalt ausdrücklich auswählst. Die Startseite enthält den Namen aus deinem Profil.
+
+```sh
+python3 start.py portfolio --fakt FAKTEN-ID --titel "Meine Arbeit" --link "Arbeitsprobe" https://example.org/projekt
+```
+
+`--fakt` und `--link` sind wiederholbar. Mit `--sprache en` verwendet der Assistent hinterlegte englische Fassungen. Ein späterer ausdrücklicher Portfolio-Befehl funktioniert auch nach einem Setup ohne Portfolio. Die Startseite des Wizards und unveränderte, vom Programm erzeugte Fassungen können aktualisiert werden. Erkennt der Assistent eine von dir bearbeitete Seite, legt er die neue Fassung zur Übernahme unter `portfolio/entwuerfe` ab. Nach deiner Veröffentlichung vergleicht `python3 start.py portfolio-pruefen --url https://example.org/` die tatsächlich ausgelieferte Seite mit deiner lokalen `index.html`.
+
+### Geschützte Seite für einen Empfänger
+
+Erzeuge je Empfänger eine eigene Fassung. Verwende dafür die Stellen-ID der Bewerbung und die tatsächliche Basisadresse deines Portfolios.
+
+```sh
+python3 start.py persona JOB-ID --basis-url https://example.org --anrede "Guten Tag an das Projektteam" --fakt FAKTEN-ID --link "Arbeitsprobe" https://example.org/projekt
+python3 start.py persona-liste --id JOB-ID
+python3 start.py persona-pruefen JOB-ID
+```
+
+Die Empfängerseite unterstützt Anrede, Überschrift, ausgewählte Profilfakten, Links und eine eigene Akzentfarbe als `--akzent "#245c49"`. Mit `--fassung v-… --cv Lebenslauf.pdf` erhält sie einen einzelnen, für diese Stelle geprüften Lebenslauf aus der ausgewählten Paketfassung. Die Empfängerdaten einschließlich des Lebenslaufs werden im Browser mit dem separaten Zugangsschlüssel entschlüsselt. Jede Fassung bekommt eine neue Adresse und einen eigenen Schlüssel. Du findest den Schlüssel ausschließlich im ausgegebenen Privatpfad. Nur der Inhalt unter `portfolio/public` gehört auf deinen Host.
+
+Nach dem Hochladen vergleicht `persona-pruefen` die zuletzt erzeugte Empfängerfassung mit der aktuellen Auslieferung. Für ältere Fassungen wähle `--version` aus `persona-liste`. Eine neue Fassung widerruft eine bereits veröffentlichte ältere Seite nicht. Übermittle dem beabsichtigten Empfänger Adresse und Zugangsschlüssel getrennt und prüfe vorher selbst die Auswahl.
+
 ## 2. Kostenloses Konto und erste Webadresse
 
 1. Erstelle bei Cloudflare ein Konto mit deiner E-Mail-Adresse und bestätige die Bestätigungsmail. Für ein statisches Portfolio reicht der kostenlose Tarif **Free**. [Konto erstellen](https://dash.cloudflare.com/sign-up) · [Pages Free und Tarifgrenzen](https://developers.cloudflare.com/pages/platform/limits/)

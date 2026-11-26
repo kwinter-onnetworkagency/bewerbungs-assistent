@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import * as fs from 'node:fs'
+import {spawnSync} from 'node:child_process'
 import { homedir } from 'node:os'
 import path from 'node:path'
 import { domainToASCII, fileURLToPath } from 'node:url'
@@ -92,9 +93,21 @@ function inside(candidate, base) {
   return rel === '' || (!path.isAbsolute(rel) && rel !== '..' && !rel.startsWith('..' + path.sep))
 }
 async function main() {
+  if (['run', 'ausfuehren'].includes(process.argv[2])) {
+    const candidates = process.platform === 'win32' ? [['py','-3'],['python']] : [['python3'],['python']];
+    for (const [binary,...prefix] of candidates) {
+      const probe = spawnSync(binary,[...prefix,'-c','import sys; sys.exit(sys.version_info < (3,11))']);
+      if (probe.status !== 0) continue;
+      const result = spawnSync(binary,[...prefix,path.join(source,'start.py'),...process.argv.slice(3)],{stdio:'inherit'});
+      if (result.error) throw result.error;
+      process.exitCode = result.status ?? 1;
+      return;
+    }
+    throw Error('Für lokale Arbeitsbefehle Python ab 3.11 installieren. Die Chataktionen sind ohne lokale Installation nutzbar.');
+  }
   const {values} = parseArgs({options: {hilfe: {type:'boolean'}, help: {type:'boolean', short:'h'}, version: {type:'boolean'}, ziel: {type:'string'}, assistent: {type:'string'}, name: {type:'string'}, portfolio: {type:'string'}, domainweg: {type:'string'}, wunschdomain: {type:'string'}}})
   if (values.version) return console.log(JSON.parse(fs.readFileSync(path.join(source,'package.json'))).version)
-  if (values.help || values.hilfe) return console.log('Bewerbungs-Assistent einrichten\nOhne Optionen startet der Dialog. Alternativ: --assistent chatgpt|claude|claude-code|codex --name NAME --ziel NEUER_ORDNER [--portfolio ja|nein] [--domainweg vorhanden|onnetwork|cloudflare|spaeter] [--wunschdomain beispiel.de]\nIm Assistenten mit /interview beginnen, in Codex mit $interview.')
+  if (values.help || values.hilfe) return console.log('Bewerbungs-Assistent einrichten\nOhne Optionen startet der Dialog. Alternativ: --assistent chatgpt|claude|claude-code|codex --name NAME --ziel NEUER_ORDNER [--portfolio ja|nein] [--domainweg vorhanden|onnetwork|cloudflare|spaeter] [--wunschdomain beispiel.de]\nIm Assistenten mit /interview beginnen, in Codex mit $interview. Lokale Befehle: run --ordner PRIVATER_ORDNER --help.')
   const rl = createInterface({input: process.stdin, output: process.stdout})
   const defaultTarget = path.join(homedir(), 'Bewerbungen', 'Mein-Bewerbungsprojekt')
   try {

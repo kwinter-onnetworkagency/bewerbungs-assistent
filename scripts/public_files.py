@@ -9,7 +9,7 @@ import re
 ROOT = Path(__file__).resolve().parent.parent
 ROOT_FILES = {"README.md", "LICENSE", "CONTRIBUTING.md", "SECURITY.md", "ROADMAP.md", "CHANGELOG.md",
               ".gitignore", "start.py", "package.json", "Start.command", "Start.bat", "start.sh"}
-PATTERNS = ["resources/domainwege.json", "resources/Portfolio.html", "resources/Dashboard.html", "bin/start.mjs", "tests/npx.test.mjs", "resources/skills/*/SKILL.md", "bewerbung/*.py", "resources/*.txt", "resources/*.md", "docs/*.md", "examples/*.json",
+PATTERNS = ["resources/apple-mail.applescript", "resources/portal.cjs", "resources/Persona.html", "resources/persona.cjs", "resources/domainwege.json", "resources/Portfolio.html", "resources/Dashboard.html", "bin/start.mjs", "tests/npx.test.mjs", "tests/portal.test.cjs", "resources/skills/*/SKILL.md", "bewerbung/*.py", "resources/*.txt", "resources/*.md", "docs/*.md", "examples/*.json",
             "tests/test_*.py", "scripts/*.py", ".github/workflows/ci.yml"]
 SKIP = {".git", ".venv", "__pycache__", ".unlazy", ".claude", ".codex"}
 

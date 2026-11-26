@@ -19,3 +19,9 @@ Ein Mailabruf ist nicht automatisch eine vollständig bestätigte Serversynchron
 ## Kein Zugang
 
 Du kannst relevante Originalmails oder deren vollständigen Inhalt selbst bereitstellen. Der Assistent wertet dann diese Quellen aus. Er darf daraus keinen vollständigen Kontenabgleich behaupten. Persönliche Links, Codes und Anhänge gehören nicht in öffentliche Issues oder Beispieldaten.
+
+## Einen persönlichen Tagesplan einrichten
+
+Beispiel für die Aufgabenfunktion deines Assistenten: „Prüfe meine persönlichen Bewerbungspostfächer täglich um 09:00, 12:00, 15:00 und 18:00 Uhr Europe/Berlin gemäß der Vorlage Rückmeldungen. Nutze den letzten vollständigen Prüfzeitpunkt als Beginn. Erstelle zu den ersten drei Zeiten einen Zwischenbericht und um 18:00 Uhr den Tagesbericht.“ Ersetze den Beispielplan durch deinen Interviewstand. Lege die Stellensuche separat an, damit du sie bei einem Angebot beenden und die Rückmeldungen zu laufenden Bewerbungen weiter prüfen kannst.
+
+Kontrolliere mit der Aufgabenliste Name, Aktivierung, Zeitzone und nächsten Lauf. Prüfe beim ersten Lauf, ob das ausführende Gerät tatsächlich den privaten Ordner und die freigegebenen Konten erreicht. Ein Chat ohne diese Verbindung kann bereitgestellte EML-Dateien auswerten. Ein lokaler macOS-Durchlauf kann mit dem mitgelieferten Apple-Mail-Adapter arbeiten. [Abruf und Bericht](MAIL.md)
