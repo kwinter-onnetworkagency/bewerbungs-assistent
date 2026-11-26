@@ -2,9 +2,9 @@
 
 Der öffentliche Quellcode enthält ausschließlich Programmcode, neutrale Vorlagen und fiktive Beispiele. Die Einrichtung kopiert die benötigten Dateien in einen neuen persönlichen Ordner außerhalb jedes Git-Repositories. Das Originalprojekt und dessen Historie werden nicht kopiert.
 
-`setup.py` richtet diesen Ordner ein. `interview.py` fragt den persönlichen Zuschnitt ab und hält einen unterbrechbaren Interviewstand. `core.py` verwaltet Profilfakten, eindeutige Stellen, manuelle Bewertungen, Entwürfe, Prüfnotizen und belegte Ereignisse. `documents.py` erstellt einfache DOCX-Dateien. `export.py` liefert Markdown, CSV und vier gezielt ausgewählte Dateien für Chat-Projekte. `cli.py` verbindet die Befehle.
+`setup.py` richtet diesen Ordner ein. `interview.py` fragt den persönlichen Zuschnitt ab und hält einen unterbrechbaren Interviewstand. `core.py` verwaltet Profilfakten, eindeutige Stellen, manuelle Bewertungen, Entwürfe, Prüfnotizen und belegte Ereignisse. `documents.py` erstellt A4-DOCX-Dateien mit Stellenbezug und Sprachwahl. `unterlagentext.py` prüft Text, Struktur und ATS-Lesereihenfolge. `anlagen.py` sichert Originale und fasst sie nach Arbeitgebervorgaben in inhaltsadressierten Paketfassungen zusammen. `export.py` baut Dashboard, Einzelmappen und Auswertungen. Sein separater Chat-Export bündelt vier ausgewählte Texte. `cli.py` verbindet die Befehle.
 
-Es gibt keine Netzwerkbibliothek, API-Schlüssel, laufenden Dienste, Telemetrie oder automatischen Versand. Recherche und intelligente Gesprächsführung finden mit den vom Nutzer tatsächlich verfügbaren Werkzeugen in Claude, ChatGPT oder einem lokalen Coding-Assistenten statt. Das lokale Interview ist zusätzlich ohne KI-Zugang nutzbar.
+`recherche.py` ruft auf Anforderung BA-Daten und Greenhouse-Boards per HTTP ab und liest zuvor gesichtete Indeed-Funde ein. `portal.py` übergibt freigegebene Felder und geprüfte Paketdateien an einen lokal gestarteten Playwright-Browser. `persona.py` baut freigegebene Portfolioseiten und vergleicht die veröffentlichten Bytes am angegebenen Ziel. Der Python-Kern verwendet die Standardbibliothek. Funktionen mit Zusatzwerkzeugen prüfen deren Verfügbarkeit bei Benutzung.
 
 Profilfakten sind die einzige Quelle für Qualifikationen. Das Interview unterscheidet Nutzerangaben von unabhängig bereitgestellten Nachweisen. Arbeitsregeln liegen in `preferences`; feste persönliche Gehalts-, Wohnort-, Abschluss- oder Mailkontenvorgaben gibt es nicht. Der Assistent lässt das Ergebnis vor Nutzung gegenlesen.
 
@@ -14,7 +14,7 @@ Dateischreibvorgänge erfolgen mit Prozesssperre und atomarem Dateiersatz. Ein z
 
 Prüfnotizen werden an Profil, Anzeigeninhalt und Entwurf gebunden. Eine spätere Änderung macht die Freigabe zum Status `vorbereitet` ungültig. Die Dokumentprüfung selbst führt der Nutzer mit seinem Assistenten durch.
 
-Bewusste Grenzen: kein ATS-Autofill, keine Kontenanmeldung, kein Mailadapter, kein Kalenderadapter und keine automatisch angelegten Hintergrundroutinen. Dafür werden neutrale Arbeitsanweisungen mitgeliefert. Anbieter-/Betriebssystemzugriff lässt sich ergänzen, ohne den portablen lokalen Kern zu verändern.
+`mailstand.py` leitet Message-ID und Zeitstempel aus gelesenen EML-Originalen ab, trennt Eingang, inhaltliche Antwort und Auswahlentscheidung und sichert Berichtsmanifeste. `applemail.py` spricht auf macOS ausdrücklich angegebene Konten und Ordner über AppleScript an. `termine.py` baut vCard- und Kalenderdateien mit stabilen Kennungen sowie Mappen je Gesprächsrunde. Der Nutzer kontrolliert Kontozugänge, endgültigen Versand und Importe in seine Apps. [Funktionsübersicht](FUNKTIONSUMFANG.md)
 
 Chat-Dateien sind mit export_only gekennzeichnete Ansichten. Die lokale Profil-/Arbeitsstandvalidierung lehnt sie als Ersatz für vollständige Originaldateien ab. Änderungen werden gezielt übernommen. Belegart und ursprüngliche Faktenherkunft bleiben im Export sichtbar; lokale Quellenorte bleiben zurück. Bereits bekannte Bewerbungen werden als ungeprüfte Hinweise mitgegeben.
 

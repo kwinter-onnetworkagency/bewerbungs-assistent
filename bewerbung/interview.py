@@ -26,6 +26,7 @@ QUESTIONS = [
     ("search", "Welche Suchregion/Quellen und wie häufig neue Vorschläge?", "text"),
     ("mail", "Welche persönlichen Mailkonten/Ordner möchtest du später selbst verbinden? Was muss im Posteingang bleiben? Keine Zugangsdaten.", "text"),
     ("reports", "Wie oft und in welcher Zeitzone möchtest du Berichte? Auch ohne Änderungen?", "text"),
+    ("network_profile", "Möchtest du dein LinkedIn-Profil abgleichen? Welche Sprache und Abschnitte sind dafür freigegeben?", "text"),
     ("known_applications", "Welche bereits beworbenen, besprochenen oder ausgeschlossenen Stellen sind bekannt? Titel, Firma, ID/URL und Beleg nennen.", "text"),
 ]
 

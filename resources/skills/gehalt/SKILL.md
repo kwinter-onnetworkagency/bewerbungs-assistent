@@ -10,3 +10,5 @@ Erstelle eine Tabelle mit Quelle und Direktlink, Datenstand/Abrufdatum, Rolle, R
 Fasse Arbeitgeberband, Marktvergleich, Passung zum eigenen Ziel und konkrete Budgetfrage separat zusammen. Pro Quelle Originalwert erhalten. Bei fehlendem Zugang die betroffene Quelle nennen und mit zugänglichen Quellen fortfahren. Ohne Beleg bleibt das Arbeitgeberbudget offen. Lokal nachvollziehbare Ergebnisse mit der richtigen Stellen-ID als Notiz sichern und die Übersicht aktualisieren (docs/ARBEITSPLATZ.md).
 
 Für exakte Monats-, Jahres- oder Stundenwerte nutze lokal `gehaltswert`. Je Quelle, Berufsgruppe, Gebiet und Kennzahl getrennt erfassen. Gedeckelte oder fehlende Werte mit ihrem Wortlaut als Notiz erhalten.
+
+Lokal kann `entgeltatlas` bei eingerichtetem Zugang Median und Quartile der passenden Berufsgruppe abrufen. Speichere Arbeitgeberangaben mit `gehaltsband`, weitere belastbare Marktwerte mit `gehaltswert`. Erkläre offene Werte. Siehe docs/RECHERCHE.md.

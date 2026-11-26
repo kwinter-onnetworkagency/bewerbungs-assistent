@@ -11,9 +11,11 @@
 
 ## Später
 
-- Optionale Mailadapter und Suchadapter nur mit nachvollziehbarem Bedarf; persönlicher Zugriff und Anbieterregeln bleiben Voraussetzung.
+- Weitere Anbieter nach konkret belegtem Bedarf anbinden.
 
 ## Erledigt
+
+- 26.11.2026: Stellenbezogene Unterlagen, Anlagenpakete, Portalvorbereitung, Quellenrecherche, empfängerbezogene Portfolios, Mailberichte, Kontakte und Gesprächstermine.
 
 - Portfolio-Wizard mit Domainwahl und Registrierungswegen veröffentlicht.
 

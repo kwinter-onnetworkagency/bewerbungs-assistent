@@ -9,3 +9,7 @@ Tests: `python -m unittest discover -s tests -v`. Prüfung des öffentlichen Lie
 Versionen sind auf GitHub gekennzeichnet. Die persönliche Installation aktualisiert sich nicht selbst. Vor einem Update sichern; Anleitung in INSTALLATION.md. Profil, Interview, Bewerbungsstand, Belege und Originalunterlagen erhalten.
 
 Vor einer eigenen Veröffentlichung zusätzlich eine private Begriffsliste außerhalb des Repositories anlegen und über BEWERBUNG_PRIVATE_TERMS an check_public.py übergeben. Die generische Prüfung erkennt nicht beliebige Personendaten. Der Git-Index wird ebenfalls gegen die Allowlist geprüft; neue Geheimnisse in ausgeschlossenen, aber versehentlich getrackten Ordnern werden abgewiesen.
+
+Für PDF-Export und Paketprüfung siehe DOKUMENTE.md und ANLAGEN.md. Für die optionale Portalvorbereitung wird Playwright mit Chromium im persönlichen Ordner eingerichtet. Das optionale Portfolio kann auf Cloudflare Pages hochgeladen werden. Private Quellen, Zugangsschlüssel und der gesamte persönliche Arbeitsordner gehören ausschließlich auf das eigene Gerät bzw. in ein privates Backup. Veröffentliche nur den vorgesehenen Ordner portfolio/public. Die lokale Installation benötigt für die Kernfunktionen keinen Server.
+
+Mit `python scripts/release_assets.py NEUER_RELEASEORDNER` aus einem sauberen Quellstand entstehen die Installations-ZIP, die portable Dashboard-Datei, ein fiktives Beispiel mit den verlinkten Übersichten und SHA-256-Prüfsummen. Veröffentliche die Dateien am GitHub-Release für dieselbe Version.

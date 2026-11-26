@@ -7,7 +7,7 @@ Du kannst mit einem Chat-Projekt beginnen oder einen lokalen Arbeitsordner einri
 Mit [Node.js ab 20 samt npm](https://nodejs.org/) und [Git](https://git-scm.com/downloads) starte im Terminal:
 
 ```sh
-npx github:kwinter-onnetworkagency/bewerbungs-assistent#v0.5.1
+npx github:kwinter-onnetworkagency/bewerbungs-assistent#v0.6.0
 ```
 
 Das persönliche Portfolio ist mit **Ja** voreingestellt. Danach fragt der Wizard, ob du eine eigene Domain besitzt. Du kannst eine vorhandene Domain verbinden, eine neue bei on:NetworkAgency oder Cloudflare registrieren oder mit einer kostenlosen Pages-Adresse starten. [Portfolio einrichten](PORTFOLIO.md)
@@ -16,7 +16,7 @@ Auch ohne Dialog wird die lokale Startseite angelegt. Mit `--portfolio nein` üb
 
 Beim ersten Start kann npm um Bestätigung für den Download bitten. Der Assistent fragt nach Arbeitsumgebung, Profilname und einem neuen privaten Zielordner. Öffne diesen Ordner in Claude Code und gib `/interview` ein. In Codex starte mit `$interview`. Für ChatGPT und Claude im Browser zeigt dir der Dialog die beiden benötigten Dateien. Bereits eingerichtete Ordner bleiben erhalten.
 
-Die acht Aktionen heißen `interview`, `stellensuche`, `anschreiben`, `rueckmeldung` sowie `bericht`, `dashboard`, `gehalt` und `gespraech`. Claude Code lädt sie aus den lokalen Projektskills, Codex aus `.agents/skills`. Im Browser deutet die Projektanweisung die eingegebene Nachricht. Falls die Oberfläche den Schrägstrich abfängt, schreibe beispielsweise „Starte /interview“.
+Die [Funktionsübersicht](FUNKTIONSUMFANG.md) enthält alle Kurzbefehle von der Stellensuche bis zu Paketbau, Portal und Rückmeldungen. Claude Code lädt sie aus den lokalen Projektskills, Codex aus `.agents/skills`. Im Browser deutet die Projektanweisung die eingegebene Nachricht. Falls die Oberfläche den Schrägstrich abfängt, schreibe beispielsweise „Starte /interview“.
 
 ## ChatGPT oder Claude im Browser
 
@@ -39,6 +39,18 @@ Datei-, Projekt- und Werkzeugverfügbarkeit hängen von deinem Tarif und den Ein
 ### Voraussetzungen
 
 Python 3.11 oder neuer. Installation: [python.org](https://www.python.org/downloads/). Für das Grundprogramm brauchst du weder Git noch Zusatzpakete. Falls du PDF-Dateien automatisch aus DOCX erstellen möchtest, installiere zusätzlich [LibreOffice](https://www.libreoffice.org/download/download-libreoffice/). Du kannst DOCX auch selbst in Word öffnen und als PDF exportieren.
+
+### Optionale Werkzeuge je Aufgabe
+
+| Aufgabe | Was auf dem eigenen Rechner verfügbar sein muss |
+|---|---|
+| DOCX erstellen | Python ab 3.11. Für die Konvertierung in PDF zusätzlich LibreOffice oder ein selbst ausgeführter PDF-Export. |
+| PDF-Fassungen prüfen und bündeln | Poppler mit `pdfinfo`, `pdftotext` und für mehrteilige PDFs `pdfunite` im Suchpfad. Prüfe die Programme einzeln mit `-v`. |
+| Onlineformular vorbereiten | Node.js und die lokale Installation von Playwright und Chromium im privaten Ordner. [Einrichtung](PORTAL.md) |
+| Geschützte Portfoliofassung erzeugen | Node.js und ein eingerichtetes persönliches Portfolio. Die Veröffentlichung erfolgt über dein statisches Hosting. [Portfolio](PORTFOLIO.md) |
+| Suchlauf und Gehaltsabruf | Internetzugang. Für die direkten Dienste der Bundesagentur eigene Zugangsdaten über `BA_JOBSUCHE_API_KEY` und `BA_ENTGELTATLAS_API_KEY` lokal bereitstellen. Greenhouse-Boards können einzeln gewählt werden. [Recherche](RECHERCHE.md) |
+| Apple Mail bedienen | macOS, eingerichtetes persönliches Mailkonto und die vom System angefragte Automationserlaubnis. Ohne Apple Mail lassen sich bereitgestellte EML-Dateien mit `mail-erfassen` auswerten. |
+| Kalender und Adressbuch | ICS- bzw. VCF-Import in der persönlichen App. Für benannte Zeitzonen werden zugängliche IANA-Zeitzonendaten benötigt. [Termine](TERMINE.md) |
 
 ### macOS
 
@@ -98,7 +110,17 @@ Der Einrichtungsassistent installiert weder Codex noch Kontoverbindungen oder Au
 
 ## Aktualisieren und sichern
 
-Die persönliche Installation enthält eine Kopie des Werkzeugs. Neue GitHub-Versionen ändern deinen Arbeitsordner nicht automatisch. Sichere den ganzen persönlichen Ordner an einem privaten Ort, bevor du Werkzeugdateien aktualisierst. Tausche nur `start.py`, `bewerbung`, `resources` und `docs` gegen die neue Version aus. `profil.json`, `interview.json`, `bewerbungen.json`, Belege und Unterlagen erhalten. Lies vor einem Versionssprung die Release-Hinweise.
+Wenn du bereits mit einer lokalen 0.5.x-Installation arbeitest, beende laufende Bewerbungsbefehle, Routinen und offene Browserprofile. Schließe auch Editoren, die automatisch speichern. Sichere den bisherigen Ordner privat. Ersetze beide Beispielpfade durch deine Ordner. Das Ziel muss neu sein und außerhalb der Quelle sowie außerhalb eines Git-Repositories liegen.
+
+```sh
+npx github:kwinter-onnetworkagency/bewerbungs-assistent#v0.6.0 aktualisieren --von "/Pfad/Mein-Bewerbungsprojekt" --ziel "/Pfad/Mein-Bewerbungsprojekt-0.6"
+```
+
+Der Befehl installiert die neue Werkzeugfassung neben dem bisherigen Arbeitsordner. Er übernimmt die Originaldateien von Profil, Interview, bisherigen Bewerbungen, Belegen, Unterlagen, Portal-, Mail- und Gesprächsdaten sowie deiner eigenen Portfolioseite. Auch selbst angelegte Dateien werden kopiert. Bestehende Exporte bleiben als bisheriger Stand erhalten. Die interne Kennung des Arbeitsordners bleibt erhalten. Während der Übernahme gilt im alten Ordner die normale temporäre Schreibsperre. Symbolische Links, Sonderdateien und verschachtelte Git-Verzeichnisse werden mit einem Hinweis abgewiesen. Trenne solche externen Verweise vor einem erneuten Versuch in einer privaten Kopie.
+
+**Anpassungen vergleichen.** Die neue Edition von `start.py`, `bewerbung/`, `resources/`, `docs/` und `LICENSE` ist im Ziel aktiv. Im angezeigten Ordner `Update-Abgleich/werkzeug-bisher/` findest du die bisherige Fassung einschließlich eigener Vorlagen und Änderungen in diesen Pfaden. Der Zielordner behält vorhandene Projektanweisungen und gleichnamige Skills als aktive Fassung. Abweichende neue Vorlagen stehen unter `Update-Abgleich/vorlagen-neu/`; neue, bisher fehlende Skills kommen direkt hinzu. Vergleiche die Anweisungen und übernimm die für dich passenden Ergänzungen. Bei einem weiteren Update bekommt der neue Abgleichordner einen eigenen Namen.
+
+Öffne den **neuen privaten Arbeitsordner** im Assistenten. Prüfe dort mit `python3 start.py pruefen` das Profil und erzeuge mit `python3 start.py bericht` die aktuelle Übersicht. Unter Windows nutze `py -3`. Bei Browserprojekten kannst du den geprüften Chat-Export aus diesem Ordner erneut übernehmen. Richte vorhandene Routinen und Verknüpfungen auf den neuen Pfad aus, bevor du die Arbeit fortsetzt. Den bisherigen Ordner kannst du als private Sicherung behalten, bis du den neuen Stand geprüft hast.
 
 ## Offizielle Quellen
 
@@ -113,6 +135,4 @@ Quellenstand 24.11.2026. Bedienoberflächen und Tarife können sich ändern:
 - [Claude Code: Skills aufrufen](https://code.claude.com/docs/en/skills)
 - [Codex: Skills nutzen](https://developers.openai.com/codex/skills/)
 
-Bei einem Update von v0.1.0 kopiere zusätzlich `resources/ASSISTENT.txt` in deine Projektanweisungen (eigene Regeln beibehalten). Für native Aufrufe kopiere die Unterordner aus `resources/skills/` nach `.claude/skills/` (Claude Code) bzw. `.agents/skills/` (Codex). Gleichnamige eigene Skills vorher vergleichen. Öffne den persönlichen Ordner erneut.
-
-Ab Version 0.3 findest du die persönliche Übersicht in `exports/Dashboard.html`. Bestehende Installationen wie oben aktualisieren, dabei die Programmvorlagen aus `resources/` übernehmen und die eigenen Arbeitsdaten erhalten. Beim nächsten Bericht wird das Dashboard neu erzeugt. Für Browserprojekte kann [der Arbeitsleitfaden](ARBEITSPLATZ.md) zusätzlich hochgeladen werden.
+Kontakt-, Mailkonto- und Gehaltspräferenzen werden beim Chat-Export standardmäßig ausgelassen. Übernimm sie bei Bedarf gezielt mit `chat-export --mit-kontakt` oder `chat-export --mit-gehalt`. Lies weiterhin Freitexte auf persönliche Angaben durch.

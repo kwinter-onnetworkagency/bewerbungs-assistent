@@ -1,0 +1,40 @@
+<!doctype html><html lang="__LANG__"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer">
+<title>Persönliches Portfolio</title><style>
+:root{font:1rem/1.6 system-ui,sans-serif;color:#20272e;background:#f8f9fa}main{max-width:44rem;margin:8vh auto;padding:1.5rem;overflow-wrap:anywhere}h1{line-height:1.2}form{display:grid;gap:.75rem;max-width:26rem}input,button{font:inherit;padding:.6rem}button{background:#245c49;color:white;border:0;cursor:pointer}li{margin-bottom:.5rem}a{color:#245c49}
+</style></head><body><main>
+<h1 id="name">Persönliches Portfolio</h1><form id="unlock"><label for="key">Zugangsschlüssel</label><input id="key" type="password" required autocomplete="off"><button>Portfolio öffnen</button></form>
+<p id="error" role="status"></p><article id="profile" hidden></article>
+</main><script>
+const packet=__PACKET__;
+const english=document.documentElement.lang==='en';
+if(english){
+ document.title='Personal portfolio';
+ document.querySelector('#name').textContent=document.title;
+ document.querySelector('label').textContent='Access key';
+ document.querySelector('button').textContent='Open portfolio';
+}
+const bytes=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+document.querySelector('form').addEventListener('submit',async e=>{
+ e.preventDefault();
+ const status=document.querySelector('#error');
+ try {
+  const key=await crypto.subtle.importKey('raw',bytes(document.querySelector('#key').value.trim().replaceAll('-','+').replaceAll('_','/')), 'AES-GCM',false,['decrypt']);
+  const clear=await crypto.subtle.decrypt({name:'AES-GCM',iv:bytes(packet.iv)},key,bytes(packet.data));
+  const data=JSON.parse(new TextDecoder().decode(clear)), article=document.querySelector('#profile');
+  const add=(tag,text)=>{const element=document.createElement(tag);element.textContent=text;article.append(element);return element};
+  document.querySelector('#name').textContent=data.name;
+  if(/^#[0-9a-f]{6}$/i.test(data.accent)) document.querySelector('h1').style.borderBottom='2px solid '+data.accent;
+  add('h2',data.title || data.role);if(data.title)add('p',data.role);add('p',data.salutation);
+  for(const fact of data.facts)add('p',fact);
+  for(const link of data.links || []) {
+    const target=new URL(link.url);
+    if(!['https:','http:'].includes(target.protocol))continue;
+    const item=add('p',''), anchor=document.createElement('a');
+    anchor.href=target.href;anchor.rel='noreferrer';anchor.textContent=link.title;item.append(anchor);
+  }
+  if(data.cv){const link=add('a',data.cv.name);link.download=data.cv.name;link.href=URL.createObjectURL(new Blob([bytes(data.cv.content)],{type:'application/pdf'}));}
+  article.hidden=false;e.target.reset();e.target.hidden=true; e.target.style.display='none';status.textContent='';
+ }catch{status.textContent=english?'Could not open portfolio. Check the access key and the HTTPS address.':'Öffnen fehlgeschlagen. Bitte prüfen Sie den Zugangsschlüssel und öffnen Sie das Portfolio über HTTPS.';}
+});
+</script></body></html>

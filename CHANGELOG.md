@@ -1,5 +1,11 @@
 # Änderungen
 
+## 26.11.2026 · Version 0.6.0
+
+- Stellenbezogene Lebensläufe und Anschreiben, dokumentierte ATS-Prüfung, geprüfte Uploadpakete und tatsächliche Versandfassungen.
+- Quellen- und Gehaltsrecherche, Portfoliopersonalisierung, Portalvorbereitung, Übersichten, Gesprächsmappen, Kontakte, Termine und private Mailberichte.
+
+
 ## 0.5.1 (25.11.2026)
 
 - Direktlink zum Bestellformular von on:NetworkAgency mit optional vorausgefüllter Wunschdomain.

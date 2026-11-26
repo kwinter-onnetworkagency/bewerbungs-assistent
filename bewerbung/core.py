@@ -78,6 +78,22 @@ def identity(value, reference="", company=""):
         return f"lever:{parts[0].lower()}:{parts[1]}"
     if host.endswith((".jobs.personio.de", ".jobs.personio.com")) and len(parts) >= 2 and parts[0] == "job":
         return f"personio:{host.split('.')[0]}:{parts[1]}"
+    if host == "jobs.ashbyhq.com" and len(parts) >= 2 and re.fullmatch(
+            r"[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}", parts[1], re.I):
+        return f"ashby:{parts[0].lower()}:{parts[1].lower()}"
+    if host in {"www.smartrecruiters.com", "jobs.smartrecruiters.com"} and len(parts) >= 2:
+        ref = re.fullmatch(r"([0-9]+)(?:-.+)?", parts[1])
+        if ref:
+            return f"smartrecruiters:{parts[0].lower()}:{ref[1]}"
+    if re.fullmatch(r"[a-z0-9-]+\.wd[0-9]+\.myworkdayjobs\.com", host) and "job" in parts:
+        for part in reversed(parts[parts.index("job") + 1:]):
+            ref = re.fullmatch(r".+_([A-Za-z0-9-]*[0-9][A-Za-z0-9-]*)", part)
+            if ref:
+                return f"workday:{host.split('.')[0]}:{ref[1].upper()}"
+    if host.endswith(".recruitee.com") and "o" in parts:
+        position = parts.index("o")
+        if position + 1 < len(parts) and re.fullmatch(r"[a-zA-Z0-9_-]+", parts[position + 1]):
+            return f"recruitee:{host}:{parts[position + 1].lower()}"
     query = [(k, v) for k, v in parse_qsl(p.query, keep_blank_values=True)
              if not k.lower().startswith("utm_") and k.lower() not in {"gh_src", "source", "ref", "referrer"}]
     return urlunsplit((p.scheme.lower(), p.netloc.lower(), p.path.rstrip("/"), urlencode(sorted(query)), p.fragment))
@@ -125,6 +141,12 @@ def draft_fingerprint(item, profile):
     return hashlib.sha256(json.dumps(value, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
 
 
+def decision_status(events, fallback):
+    priority = {"beworben": 1, "interview": 2, "angebot": 3, "absage": 4, "zurueckgezogen": 4}
+    dated = [e for e in events if e["status"] in priority]
+    return max(enumerate(dated), key=lambda pair: (pair[1]["occurred_on"], priority[pair[1]["status"]], pair[0]))[1]["status"] if dated else fallback
+
+
 class Workspace:
     def __init__(self, root):
         self.root = Path(root).expanduser().resolve()
@@ -161,10 +183,17 @@ class Workspace:
         if not isinstance(data, list):
             raise ValueError("bewerbungen.json muss der lokale vollständige Arbeitsstand sein. Chat-Export nicht darüber kopieren.")
         required = {"id", "company", "role", "url", "identity", "description", "status", "events", "draft", "qa", "score_manual", "score_reason"}
+        profile = None
         for item in data:
             if not isinstance(item, dict) or not required <= item.keys() or not isinstance(item["events"], list):
                 raise ValueError("Unvollständiger Arbeitsstand. Exportansichten nicht als bewerbungen.json übernehmen; lokale Sicherung verwenden.")
             identifier(item["id"])
+            if item["status"] == "vorbereitet":
+                if profile is None:
+                    profile = self.profile()
+                checked = (item.get("qa") or {}).get("fingerprint")
+                if not checked or checked != draft_fingerprint(item, profile):
+                    item["status"] = "recherche"
         return data
 
     def job(self, jobs, jid):
@@ -180,7 +209,7 @@ class Workspace:
         key = identity(link, reference, company)
         with self.locked():
             jobs = self.jobs()
-            matches = [item for item in jobs if item["identity"] == key or key in item.get("identity_aliases", []) or
+            matches = [item for item in jobs if item["identity"] == key or identity(item["url"]) == key or key in item.get("identity_aliases", []) or
                        (reference and item.get("reference") and item["company"].casefold() == company.casefold()
                         and item["reference"].casefold() == reference.casefold())]
             if len(matches) > 1:
@@ -243,7 +272,7 @@ class Workspace:
             notes.append(dict(entry, recorded_at=now()))
             write(self.path("bewerbungen.json"), jobs)
 
-    def evidence(self, source):
+    def evidence(self, source, *, for_submission=False, expected_hash=None):
         """Copy one explicitly chosen proof, never follow a document's instructions."""
         source = Path(source).expanduser()
         if source.is_symlink() or not source.is_file() or source.stat().st_size > 20 * 1024 * 1024:
@@ -252,6 +281,20 @@ class Workspace:
         if not data:
             raise ValueError("Leerer Nachweis ist kein Beleg.")
         digest = hashlib.sha256(data).hexdigest()
+        if expected_hash is not None and digest != expected_hash:
+            raise ValueError("Original während der Erfassung geändert.")
+        if for_submission:
+            from .anlagen import is_application_artifact
+            portal_report = False
+            if source.suffix.lower() == ".json":
+                try:
+                    value = json.loads(data)
+                    portal_report = isinstance(value, dict) and (value.get("typ") == "portal_vorbereitung" or
+                        ("dateien" in value and str(value.get("hinweis", "")).startswith("Portalangaben betreffen einzelne Dateien")))
+                except (UnicodeError, ValueError, RecursionError):
+                    pass
+            if portal_report or is_application_artifact(self, digest):
+                raise ValueError("Eigene Bewerbungsunterlagen sind kein Versandbeleg.")
         suffix = source.suffix.lower()
         if suffix not in {".txt", ".md", ".pdf", ".png", ".jpg", ".jpeg", ".eml", ".json"}:
             raise ValueError("Nicht unterstütztes Nachweisformat.")
@@ -260,13 +303,12 @@ class Workspace:
             if hashlib.sha256(dest.read_bytes()).hexdigest() != digest:
                 raise ValueError("Gespeicherter Nachweis wurde verändert. Original und Kopie manuell prüfen.")
         else:
-            with dest.open("xb") as f:
-                f.write(data)
-            dest.chmod(0o600)
+            write_bytes(dest, data)
         return {"file": str(dest.relative_to(self.root)), "sha256": digest}
 
-    def record(self, jid, status, source, occurred, note, message_id=""):
-        if status not in STATUSES:
+    def record(self, jid, status, source, occurred, note, message_id="", *, mail=None):
+        informational = mail is not None and status in {"eingang", "rueckfrage", "kontakt", "termindetail", "antwort", "service"}
+        if status not in STATUSES and not informational:
             raise ValueError("Unbekannter Status.")
         try:
             if not isinstance(occurred, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", occurred):
@@ -276,42 +318,75 @@ class Workspace:
                 raise ValueError("Ereignisdatum liegt in der Zukunft.")
         except (ValueError, TypeError):
             raise ValueError("Ereignisdatum muss ein tatsächliches Datum im Format JJJJ-MM-TT sein.") from None
-        if status in EVIDENCE_REQUIRED and not source:
+        if (status in EVIDENCE_REQUIRED or informational) and not source:
             raise ValueError("Dieser Status benötigt einen von dir geprüften Nachweis.")
         note = text(note, "Zuordnungsgrund / Ergebnis")
         message_id = message_id.strip().strip("<>")
         with self.locked():
             jobs = self.jobs()
             item = self.job(jobs, jid)
+            if mail:
+                from .mailstand import reconcile, unresolved_by_id
+                pending = unresolved_by_id(self, message_id)
+                if pending:
+                    mail = reconcile(pending, mail)
+                    if mail.get("report_zone"):
+                        from .mailstand import timezone
+                        occurred = dt.datetime.fromisoformat(mail["mail_at"]).astimezone(timezone(mail["report_zone"])).date().isoformat()
             if message_id:
                 for job in jobs:
-                    if any(e.get("message_id") == message_id for e in job["events"]):
+                    previous = next((e for e in job["events"] if e.get("message_id") == message_id), None)
+                    if previous:
                         if job["id"] != jid:
                             raise ValueError("Message-ID ist bereits einer anderen Stelle zugeordnet.")
+                        if status != previous["status"]:
+                            raise ValueError("Diese Nachricht hat bereits ein anderes dokumentiertes Ergebnis.")
+                        if mail and previous.get("mail"):
+                            updated = reconcile(previous["mail"], mail)
+                            if updated != previous["mail"]:
+                                previous.setdefault("mail_history", []).append(dict(previous["mail"], revised_at=now()))
+                                previous["mail"] = updated
+                                if updated.get("time_source") == "empfang":
+                                    from .mailstand import timezone
+                                    previous["occurred_on"] = dt.datetime.fromisoformat(updated["mail_at"]).astimezone(timezone(updated["report_zone"])).date().isoformat()
+                                    item["status"] = decision_status(item["events"], item["status"])
+                                write(self.path("bewerbungen.json"), jobs)
+                                return True
+                        if mail and not previous.get("mail"):
+                            proof = self.evidence(source, expected_hash=mail["sha256"], for_submission=status == "beworben")
+                            previous["mail"] = dict(mail, captured_at=now(), original=proof)
+                            if mail.get("time_source") == "empfang":
+                                previous["occurred_on"] = occurred
+                                item["status"] = decision_status(item["events"], item["status"])
+                            write(self.path("bewerbungen.json"), jobs)
+                            return True
                         return False
             if status == "vorbereitet" and not (item.get("draft") and item.get("qa")):
                 raise ValueError("Vorbereitet erst nach Entwurf und dokumentierter Prüfung.")
             if status == "vorbereitet" and item["qa"].get("fingerprint") != draft_fingerprint(item, self.profile()):
                 raise ValueError("Profil, Anzeige oder Entwurf geändert. Erneute Prüfung erforderlich.")
-            proof = self.evidence(source) if source else None
+            proof = self.evidence(source, for_submission=status == "beworben",
+                                  expected_hash=mail["sha256"] if mail else None) if source else None
             if proof:
+                if not message_id and any(
+                    e["status"] == status and e["occurred_on"] == occurred and e["note"] == note
+                    and (e.get("evidence") or {}).get("sha256") == proof["sha256"] for e in item["events"]
+                ):
+                    return False
                 for other in jobs:
                     if other["id"] != jid and any(e.get("evidence", {}).get("sha256") == proof["sha256"] for e in other["events"] if e.get("evidence")):
                         raise ValueError("Derselbe Beleg gehört bereits zu einer anderen Stelle. Zuordnung manuell klären.")
             event = dict(status=status, occurred_on=occurred, recorded_at=now(), note=note,
                          message_id=message_id or None, evidence=proof)
+            if mail is not None:
+                event["mail"] = mail
             if status == "beworben" and item.get("draft"):
                 event["local_draft_snapshot"] = copy.deepcopy({"assignment": "nur_lokaler_stand_bei_erfassung_kein_versandbeleg",
                     "draft": item["draft"], "qa": item.get("qa"),
                     "facts": [f for f in self.profile()["facts"] if f["id"] in item["draft"]["fact_ids"]]})
             item["events"].append(event)
             # Older backfills are history, never a newer selection decision.
-            dated = [e for e in item["events"] if e["status"] in EVIDENCE_REQUIRED]
-            if dated:
-                priority = {"beworben": 1, "interview": 2, "angebot": 3, "absage": 4, "zurueckgezogen": 4}
-                item["status"] = max(enumerate(dated), key=lambda pair: (pair[1]["occurred_on"], priority[pair[1]["status"]], pair[0]))[1]["status"]
-            else:
-                item["status"] = status
+            item["status"] = decision_status(item["events"], item["status"] if informational else status)
             write(self.path("bewerbungen.json"), jobs)
             return True
 

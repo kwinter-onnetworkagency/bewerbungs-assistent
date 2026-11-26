@@ -2,7 +2,7 @@
 
 Ein persönlicher Bewerbungsprozess für Claude und ChatGPT. Ein geführtes Interview klärt deinen Hintergrund, deine Ziele und deine Arbeitsregeln. Daraus entsteht dein eigenes Profil für Stellensuche, Bewertung, Unterlagen und Rückmeldungen.
 
-Die Vorlagen funktionieren in einem privaten ChatGPT- oder Claude-Projekt. Für einen lokalen Arbeitsordner gibt es zusätzlich einen Einrichtungsassistenten und kleine Werkzeuge für Nachweise, Dokumente und Tracking. Kein API-Schlüssel nötig.
+Die Vorlagen funktionieren in einem privaten ChatGPT- oder Claude-Projekt. Im lokalen Arbeitsordner kannst du Stellen recherchieren, Nachweise zu fertigen PDFs zusammenstellen, Bewerbungsformulare vorbereiten und Rückmeldungen bis zum Gespräch verfolgen. Für die Einrichtung brauchst du keinen API-Schlüssel.
 
 ## Schnell starten
 
@@ -11,7 +11,7 @@ Die Vorlagen funktionieren in einem privaten ChatGPT- oder Claude-Projekt. Für 
 **Mit lokalem Arbeitsordner:** Installiere bei Bedarf [Node.js ab Version 20 mit npm](https://nodejs.org/) und [Git](https://git-scm.com/downloads). Starte einmal im Terminal:
 
 ```sh
-npx github:kwinter-onnetworkagency/bewerbungs-assistent#v0.5.1
+npx github:kwinter-onnetworkagency/bewerbungs-assistent#v0.6.0
 ```
 
 Das persönliche Portfolio ist mit **Ja** voreingestellt. Danach fragt der Wizard, ob du eine eigene Domain besitzt. Du kannst eine vorhandene Domain verbinden, eine neue bei on:NetworkAgency oder Cloudflare registrieren oder mit einer kostenlosen Pages-Adresse starten. [Portfolio einrichten](docs/PORTFOLIO.md)
@@ -20,6 +20,8 @@ Wähle deinen Assistenten, gib deinen Namen ein und wähle einen neuen privaten 
 
 | Was möchtest du tun? | Claude Code oder Nachricht im Chat-Projekt | Codex-Skill |
 |---|---|---|
+| Komplette Bewerbung vorbereiten | `/bewerbung` | `$bewerbung` |
+| LinkedIn-Profil abgleichen | `/linkedin` | `$linkedin` |
 | Persönliches Profil aufbauen | `/interview` | `$interview` |
 | Passende Stellen prüfen | `/stellensuche` | `$stellensuche` |
 | Anschreiben entwerfen | `/anschreiben` | `$anschreiben` |
@@ -28,8 +30,18 @@ Wähle deinen Assistenten, gib deinen Namen ein und wähle einen neuen privaten 
 | Vorstellungsgespräch vorbereiten und üben | `/gespraech` | `$gespraech` |
 | Persönliche Übersicht öffnen | `/dashboard` | `$dashboard` |
 | Bewerbungsstand ansehen | `/bericht` | `$bericht` |
+| Stellenbezogenen CV erstellen | `/lebenslauf` | `$lebenslauf` |
+| PDF-Paket mit Nachweisen bauen | `/anlagen` | `$anlagen` |
+| Formular und Uploads vorbereiten | `/portal` | `$portal` |
+| Öffentliche Portfolioseite erstellen | `/portfolio` | `$portfolio` |
+| Geschütztes Empfängerportfolio vorbereiten | `/persona` | `$persona` |
+| Persönliches Postfach prüfen | `/mail` | `$mail` |
+| Kontakt oder Gesprächstermin übernehmen | `/kontakt`, `/termin` | `$kontakt`, `$termin` |
+| Wiederkehrende Suche oder Mailprüfung einrichten | `/routine` | `$routine` |
 
 Beispiel für die zweite Nachricht nach dem Interview: „/stellensuche Prüfe die beiden beigefügten Anzeigen anhand meiner Muss-Kriterien.“ [Einrichtung je Assistent](docs/INSTALLATION.md)
+
+Für eine vollständige Bewerbung genügt nach dem Interview ein Auftrag wie „/bewerbung Bereite die Unterlagen für diese Stellenanzeige vor.“ Der Assistent führt dich durch Lebenslauf, Anschreiben, Nachweise und Paketprüfung. Bei mehreren Stellen braucht er die konkrete Stellen-ID oder URL.
 
 ## Vom Stellenfund zum Vorstellungsgespräch
 
@@ -37,22 +49,15 @@ Mit `/stellensuche` recherchierst du auch bei Indeed und der Bundesagentur für 
 
 `/dashboard` öffnet die lokale Übersicht mit Aufgaben, Stellenvergleich, Bewerbungsverlauf, Gesprächsmappen und Auswertung. Im Browser kannst du die HTML-Datei aus dem Release öffnen und einen Arbeitsstand von deinem Gerät laden. [Beispiele, Quellen und Bedienung](docs/ARBEITSPLATZ.md)
 
-## Was du damit machen kannst
+## Von der Unterlage bis zur Rückmeldung
 
-| Aufgabe | Unterstützung |
-|---|---|
-| Eigenes Profil aufbauen | Stationen, Nachweise, Fähigkeiten, Sprachen, Ziele, Gehalt, Mobilität und Verfügbarkeit im Interview klären |
-| Den Prozess anpassen | Branchen, Ausschlüsse, Einzelausnahmen, Schreibstil, Unterlagen, Mailablage und Berichtstakt festlegen |
-| Stellen recherchieren | Arbeitsanweisungen für aktuelle offizielle Anzeigen und neun ATS-Domains; vorbereitete Suchanfragen |
-| Stellen erfassen | Vollständige Anzeigentexte, Quelle und Referenz speichern; bekannte ATS-IDs deduplizieren |
-| Bewerten | Manuelle Scores mit Begründung; erklärbarer Wortabgleich als ergänzende Suchhilfe |
-| Unterlagen vorbereiten | Faktenbezogene Anschreibenentwürfe, einfache A4-DOCX-Dateien, PDF optional über lokal installiertes LibreOffice |
-| Bewerbungen nachhalten | Tatsächliches Ereignisdatum, Erfassungsdatum, Beleg-Hash und Message-ID; historische Absagen erhalten |
-| Arbeitsstand mitnehmen | Markdown-Bericht, CSV-Tabelle und gezielter Export für dein privates Chat-Projekt |
+Für eine konkrete Stellen-ID wählst du belegte Profilfakten, die Sprache des Anschreibens und den passenden Lebenslauf aus. Der Paketplan bestimmt, ob der Arbeitgeber einzelne Anlagen oder eine Gesamt-PDF erhält. Der Assistent prüft Pflichtanlagen, Dateigrößen, Reihenfolge und Seitenformat. Eine neue Fassung lässt sich mit der tatsächlich bestätigten Einreichung verbinden. [Unterlagen](docs/DOKUMENTE.md) · [Anlagenpakete](docs/ANLAGEN.md)
 
-Recherche, individuelle Textarbeit und dynamische Rückfragen übernimmt dein Assistent mit seinen tatsächlich verfügbaren Werkzeugen. Das lokale Programm ruft keine KI-API auf und durchsucht nicht selbst das Web. Mail-/Browserzugriff und wiederkehrende Routinen benötigen deine eigenen Verbindungen und Einstellungen. Die mitgelieferten Vorlagen allein richten sie nicht ein.
+Für ein Onlineformular kannst du die tatsächlich vorhandenen Felder erkunden, Werte zuordnen und geprüfte PDFs im sichtbaren Browser auswählen. Bereits beim Ausfüllen können Daten an den Arbeitgeber übertragen werden. Login, Einwilligungen und der letzte Absende-Schritt liegen bei dir. Für dein Portfolio kannst du eine öffentliche Startseite und eine geschützte Empfängerseite mit freigegebenen Inhalten vorbereiten. [Formularvorbereitung](docs/PORTAL.md) · [Portfolio](docs/PORTFOLIO.md)
 
-Das Werkzeug versendet keine Mail, reicht keine Bewerbung ein, beantwortet keine Captchas und bestätigt keine Termine. Du prüfst Fakten, Dokumente und den letzten Absende-Schritt selbst. Eine Quellenangabe oder ein gespeicherter Beleg ist noch keine automatisch geprüfte Wahrheit.
+Auf macOS lässt sich ein ausgewähltes persönliches Apple-Mail-Konto lesen. Auf anderen Systemen kannst du Originalnachrichten als EML bereitstellen. Empfangsbestätigung, Interview und Absage stehen getrennt im Verlauf. Bestätigte Kontakte und Termine kannst du als vCard und Kalenderdatei übernehmen. [Mail und Routinen](docs/ROUTINEN.md) · [Kontakte und Termine](docs/TERMINE.md)
+
+Die [Funktionsübersicht für Version 0.6.0](docs/FUNKTIONSUMFANG.md) nennt für jede Aufgabe den lokalen Befehl, die Voraussetzungen und den Arbeitsweg im privaten Browserprojekt.
 
 ## Deine Daten
 
@@ -69,7 +74,7 @@ Ein Chat-Export enthält dein persönliches Profil und ist eine Ansicht, kein Er
 
 ## Entwicklung
 
-Python ab 3.11, nur Standardbibliothek. Keine Paketinstallation nötig.
+Der Python-Kern verwendet die Standardbibliothek ab 3.11. PDF-Prüfung, Browserautomatisierung und PDF-Konvertierung nutzen optionale lokale Werkzeuge. Der Installer und seine Tests benötigen Node.js ab 20.
 
 ```sh
 python3 -m unittest discover -s tests -v
@@ -78,5 +83,7 @@ python3 scripts/smoke.py
 ```
 
 Die CI prüft Linux, Windows und macOS. Eine Anmeldung in fremden ChatGPT-/Claude-Konten oder der echte Versand einer Bewerbung gehören nicht zu diesen Tests. Projektaufbau: [ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+Im [Funktionsverzeichnis](docs/FUNKTIONSUMFANG.md) findest du alle Kurzbefehle mit ihren lokalen Werkzeugen und Voraussetzungen.
 
 Lizenz: [MIT](LICENSE).

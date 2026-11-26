@@ -12,7 +12,7 @@ Stelle jeweils eine Frage. Übernimm bekannte Entscheidungen aus den Projektanwe
 2. Bei Ja: „Besitzt du eine eigene Domain?“ Wer schon eine besitzt, kann die Hauptdomain oder eine Subdomain mit Cloudflare Pages verbinden.
 3. Ohne Domain: „Möchtest du deine Wunschdomain bei on:NetworkAgency oder bei Cloudflare registrieren oder mit der kostenlosen pages.dev-Adresse starten?“ Bei on:NetworkAgency frage nach der gewünschten Domain inklusive Endung. Verlinke direkt zum [Bestellformular](https://customer.onnetwork.agency/portal/domains/new). Hänge die Wunschdomain als URL-kodierten Parameter `?domain=` an. Nach der Anmeldung kann die Person Verfügbarkeit und Preis prüfen. Neukunden können die Wunschdomain und den Verlängerungspreis über den [Agenturkontakt](https://onnetwork.agency/kontakt/) anfragen. Begleite die gewählte Registrierung Schritt für Schritt. Die Person prüft Preis und Verlängerung und bestätigt einen Kauf selbst.
 
-Erstelle die lokale Startseite unter `portfolio/public/index.html` oder verwende den Entwurf aus dem Wizard. Ergänze nur freigegebenes Kurzprofil und Arbeitsproben. In einem reinen Chat-Projekt stelle die HTML-Datei zum Herunterladen bereit. Namen, Zugangsdaten und Wunschdomain werden vom Wizard nicht an einen Anbieter übertragen. [Anleitung für Cloudflare Pages und eigene Domains](https://github.com/kwinter-onnetworkagency/bewerbungs-assistent/blob/v0.5.1/docs/PORTFOLIO.md)
+Erstelle die lokale Startseite unter `portfolio/public/index.html` oder verwende den Entwurf aus dem Wizard. Ergänze nur freigegebenes Kurzprofil und Arbeitsproben. In einem reinen Chat-Projekt stelle die HTML-Datei zum Herunterladen bereit. Namen, Zugangsdaten und Wunschdomain werden vom Wizard nicht an einen Anbieter übertragen. [Anleitung für Cloudflare Pages und eigene Domains](https://github.com/kwinter-onnetworkagency/bewerbungs-assistent/blob/v0.6.0/docs/PORTFOLIO.md)
 
 ## Ablauf für den Assistenten
 
@@ -47,3 +47,5 @@ Zeige eine kompakte Zusammenfassung: belegte Fakten, Nutzerangaben, offene Frage
 ## Lokale Alternative ohne KI-Zugang
 
 `python start.py interview` führt ein speicherbares Interview mit 24 Fragen durch. `/pause` sichert den Stand, Eingabetaste lässt eine Angabe offen. Am Ende wird das Profil erst nach Bestätigung übernommen. Dieser Fragebogen stellt keine dynamischen Rückfragen und liest keine Lebensläufe; das persönliche Gespräch im Assistenten kann beides mit den dort verfügbaren Werkzeugen ergänzen.
+
+Stimme bei Interesse das berufliche Netzwerkprofil separat ab. Frage nach ausgewählten Fakten, vorhandenen Profiltexten, Sprache und den Abschnitten, die sich ändern sollen. Mit `/linkedin` können auch persönliche Empfehlungen vorbereitet und nachgehalten werden.

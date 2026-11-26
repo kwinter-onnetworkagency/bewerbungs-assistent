@@ -169,6 +169,18 @@
         border-radius: 4px;
         font-size: 13px;
       }
+      .tag::before {
+        content: "";
+        display: inline-block;
+        margin-right: 6px;
+        width: .7em;
+        height: .7em;
+        border-radius: 50%;
+        background: var(--lamp, #58636d);
+      }
+      .tag[data-ampel="gruen"] { --lamp: #245c49; }
+      .tag[data-ampel="gelb"] { --lamp: #96620a; }
+      .tag[data-ampel="rot"] { --lamp: #812c21; }
       .copy {
         white-space: pre-wrap;
         overflow-wrap: anywhere;
@@ -255,7 +267,19 @@
         article {
           break-inside: avoid;
         }
-        .copy {
+        .tag::before {
+        content: "";
+        display: inline-block;
+        margin-right: 6px;
+        width: .7em;
+        height: .7em;
+        border-radius: 50%;
+        background: var(--lamp, #58636d);
+      }
+      .tag[data-ampel="gruen"] { --lamp: #245c49; }
+      .tag[data-ampel="gelb"] { --lamp: #96620a; }
+      .tag[data-ampel="rot"] { --lamp: #812c21; }
+      .copy {
           white-space: pre-wrap;
         }
       }
@@ -286,9 +310,15 @@
           </select></label
         >
       </div>
+      <p id="local-reports" hidden>
+        <a href="Screening.html">Screeningbericht</a>
+        <a href="Pakete.html">Paketübersicht</a>
+        <a href="Kohorten.html">Kohortenauswertung</a>
+      </p>
       <div id="content"></div>
       <noscript>Bitte JavaScript aktivieren, um den lokalen Arbeitsstand anzuzeigen.</noscript>
     </main>
+    <script type="application/json" id="status-options">{}</script>
     <script type="application/json" id="snapshot">
       []
     </script>
@@ -304,6 +334,22 @@
         absage: "Absage",
         zurueckgezogen: "Zurückgezogen",
       };
+      const lights = {recherche: "grau", vorbereitet: "gelb", beworben: "gelb", interview: "gruen",
+        angebot: "gruen", absage: "rot", zurueckgezogen: "grau"};
+      for (const [code, options] of Object.entries(JSON.parse($("status-options").textContent))) {
+        if (options.name) statuses[code] = options.name;
+        if (options.ampel) lights[code] = options.ampel;
+      }
+      function statusTag(job) {
+        const tag = el("span", statuses[job.status] || job.status, "tag");
+        tag.dataset.ampel = lights[job.status] || "grau";
+        return tag;
+      }
+      const eventLabels = {
+        eingang: "Eingangsbestätigung", rueckfrage: "Rückfrage", kontakt: "Kontakt",
+        termindetail: "Termindetail", antwort: "Antwort", service: "Servicenachricht",
+      };
+      let generatedReport = !$("local-reports").hidden;
       const sections = ["Heute", "Stellen", "Bewerbungen", "Gespräche", "Auswertung"];
       const kinds = {
         screening: "Screening",
@@ -382,7 +428,7 @@
           r = el("div", null, "row");
         r.append(
           button(job.company + " · " + job.role, () => showJob(job)),
-          el("span", statuses[job.status] || job.status, "tag"),
+          statusTag(job),
         );
         box.append(r);
         if (subtitle) box.append(el("p", subtitle, "meta"));
@@ -410,12 +456,19 @@
         }
         const head = el("article");
         head.append(
-          el("strong", statuses[job.status]),
+          statusTag(job),
           el("p", "Referenz: " + (job.reference || job.id)),
           link("Originalanzeige", job.url),
         );
         if (job.score_manual != null)
           head.append(el("p", "Score: " + job.score_manual + " / 100 · " + (job.score_reason || "")));
+        if (generatedReport && job.local_detail && /^[a-z0-9][a-z0-9_-]{0,99}$/.test(job.id)) {
+          const page = el("a", "Stellenmappe mit Fassungen und Originalbelegen öffnen");
+          page.href = "Stelle-" + job.id + ".html";
+          const line = el("p");
+          line.append(page);
+          head.append(line);
+        }
         root.append(head);
         for (const [kind, label] of Object.entries(kinds)) {
           const ns = notes(job).filter((n) => n.kind === kind);
@@ -454,7 +507,7 @@
         for (const e of events) {
           const a = el("article");
           a.append(
-            el("strong", e.occurred_on + " · " + (statuses[e.status] || e.status)),
+            el("strong", e.occurred_on + " · " + (statuses[e.status] || eventLabels[e.status] || e.status)),
             el("p", e.note),
             el("small", "Erfasst " + localDay(e.recorded_at)),
           );
@@ -531,10 +584,34 @@
             card.prepend(el("b", jobs.filter((j) => j.status === key).length));
             grid.append(card);
           }
-          root.append(grid);
+          root.append(grid, el("h2", "Scoreverteilung"));
+          const scores = jobs.map(j => generatedReport ? j.score_effective : j.score_manual);
+          const buckets = el("div", null, "metrics");
+          for (const [label, low, high] of [["85 bis 100",85,100],["70 bis 84",70,84],
+              ["50 bis 69",50,69],["0 bis 49",0,49],["Ohne Score",null,null]]) {
+            const count = scores.filter(value => low === null ? !Number.isFinite(value) :
+              Number.isFinite(value) && value >= low && value <= high).length;
+            const card = el("div", label, "metric");
+            card.prepend(el("b", count));
+            buckets.append(card);
+          }
+          root.append(buckets);
           return;
         }
         if (section === "Heute") {
+          root.append(el("h2", "Nachfassen"));
+          const day = Date.parse(localDay(new Date()) + "T00:00:00Z");
+          const due = generatedReport ? jobs.filter(j => j.followup_from).map(j => ({
+            j, days: Math.round((day - Date.parse(j.followup_from + "T00:00:00Z")) / 86400000)
+          })).filter(x => x.days >= x.j.followup_days.faellig_ab) : [];
+          due.sort((a,b) => Number(b.days >= b.j.followup_days.dringend_ab) -
+            Number(a.days >= a.j.followup_days.dringend_ab) || b.days - a.days);
+          for (const {j, days} of due) {
+            const urgency = days >= j.followup_days.dringend_ab ? "dringend" : "fällig";
+            root.append(row(j, "Nachfrage " + urgency + " · " + days + " Tage seit Versand oder Kontakt"));
+          }
+          if (!due.length) root.append(empty(generatedReport ? "Keine belegte Nachfrage fällig." :
+            "Für geprüfte Nachfassfristen den lokalen Bericht erzeugen."));
           const todo = jobs
             .flatMap((j) =>
               notes(j)
@@ -568,7 +645,7 @@
             .sort((a, b) => b.e.recorded_at.localeCompare(a.e.recorded_at))
             .slice(0, 10);
           for (const { j, e } of recent)
-            root.append(row(j, e.occurred_on + " · " + (statuses[e.status] || e.status) + " · " + e.note));
+            root.append(row(j, e.occurred_on + " · " + (statuses[e.status] || eventLabels[e.status] || e.status) + " · " + e.note));
           if (!recent.length) root.append(empty("Keine Rückmeldungen erfasst."));
           return;
         }
@@ -654,6 +731,8 @@
           )
             throw Error();
           jobs = rows;
+          generatedReport = false;
+          $("local-reports").hidden = true;
           selected = null;
           draw();
           $("notice").textContent = "";
