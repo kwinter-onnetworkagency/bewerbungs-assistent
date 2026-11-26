@@ -192,6 +192,14 @@ class PackageTest(unittest.TestCase):
             anlagen.associate(self.workspace, self.jid, separate.name, 1, "Nicht dasselbe Paket")
 
         jobs = self.workspace.jobs()
+        forwarded = EmailMessage()
+        forwarded.set_content("Weiterleitung")
+        forwarded.add_attachment(extra_message)
+        different.write_bytes(forwarded.as_bytes())
+        jobs[0]["events"][0]["mail"] = {"original": self.workspace.evidence(different)}
+        write(self.workspace.path("bewerbungen.json"), jobs)
+        with self.assertRaisesRegex(ValueError, "Weitergeleitete"):
+            anlagen.associate(self.workspace, self.jid, separate.name, 1, "Weitergeleiteter Thread")
         jobs[0]["events"][0]["mail"] = {"original": self.workspace.evidence(original)}
         write(self.workspace.path("bewerbungen.json"), jobs)
         anlagen.associate(self.workspace, self.jid, separate.name, 1, "Anhänge später erhalten")

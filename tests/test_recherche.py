@@ -236,8 +236,15 @@ class RechercheTest(unittest.TestCase):
         structure = score["struktur"]
         self.assertEqual(structure["wert"], 25)
         self.assertIn("gehalt", structure["offen"])
+        configured = {**profile, "preferences": {**profile["preferences"], "strukturregeln": {"ort": {"passt": ["Standort Bonn"]}}}}
+        self.assertEqual(r.fit(configured, job)["struktur"]["faktorwerte"]["ort"], 100)
+        uncertain = {**job, "description": "Kein Standort Bonn."}
+        self.assertIn("ort", r.fit(configured, uncertain)["struktur"]["offen"])
         gap = structure["pruefungen"][0]
         self.assertEqual((gap["urteil"], gap["gefordert_jahre"], gap["belegt_jahre"], gap["fakten"]), ("luecke", 5, 3, ["f1"]))
+        for unquantified in ("2.5 Jahre", "2,5 Jahre", "3 bis 5 Jahre", "3-5 Jahre"):
+            ambiguous = {**profile, "facts": [{"id": "f2", "text": unquantified + " Führungserfahrung"}]}
+            self.assertEqual(r.experience_checks(ambiguous, job)[0]["urteil"], "offen")
         self.assertIn("standort", score["anzeigenbegriffe_ohne_worttreffer"])
         self.assertIn("führungserfahrung", score["anzeigenbegriffe_im_cv"])
         self.command("strukturcheck", job["id"], "--kriterium", "ort", "--anzeige", "Standort Bonn", "--urteil", "ausnahme",

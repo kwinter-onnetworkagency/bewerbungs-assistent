@@ -140,10 +140,8 @@ async function fillFields(config, target, atJob) {
     atJob();
     const input = target.locator(field.selector);
     if (await input.count() !== 1) throw Error('Bestätigter Selektor bezeichnet kein eindeutiges Formularfeld.');
-    if (field.key && field.key !== 'explizit') {
-      const previous = await input.inputValue();
-      if (previous && previous !== field.value) throw Error('Bestätigtes Feld enthält bereits einen anderen Wert. Persönlich prüfen.');
-    }
+    const previous = await input.inputValue();
+    if (previous && previous !== field.value) throw Error('Bestätigtes Feld enthält bereits einen anderen Wert. Persönlich prüfen.');
     const type = await input.evaluate(n => n instanceof HTMLTextAreaElement ? 'textarea' :
       n instanceof HTMLSelectElement ? 'select' : n instanceof HTMLInputElement ? n.type : '');
     if (type === 'select') await input.selectOption(field.value);

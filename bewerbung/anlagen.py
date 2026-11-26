@@ -352,8 +352,10 @@ def associate(workspace, jid, version, index, reason, *, vorlage=None, vorlagenv
             if not eml.is_file() or digest(eml) != original.get("sha256"):
                 raise ValueError("Das zugeordnete Mailoriginal fehlt oder wurde verändert.")
             message = BytesParser(policy=policy.default).parsebytes(eml.read_bytes())
+            if any(part.get_content_type() == "message/rfc822" for part in message.walk()):
+                raise ValueError("Weitergeleitete Nachricht enthält ein eigenes Mailoriginal. Dieses für die Zuordnung separat prüfen.")
             attachments = []
-            for part in message.iter_attachments():
+            for part in message.walk():
                 if (part.get_filename() or part.get_content_disposition() == "attachment") and not part.is_multipart():
                     data = part.get_payload(decode=True)
                     if data is not None and (part.get_content_type() == "application/pdf" or data.startswith(b"%PDF-")):

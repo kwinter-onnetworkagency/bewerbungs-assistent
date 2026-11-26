@@ -56,9 +56,28 @@ python3 start.py passung --id JOB-ID
 python3 start.py bewerten JOB-ID --score 70 --grund "Das Arbeitszeitmodell ist verbindlich geklärt."
 ```
 
-Die Ausgabe nennt den wirksamen Score und zeigt, welche belegten Aussagen und Kompetenzen der Anzeigentext enthält. Der Faktenabgleich gewichtet hinterlegte Stichwörter mit 55 Prozent, Kompetenzen aus Profilfakten der Art `skill` mit 25 Prozent und Zielrollen im Titel mit 20 Prozent. Bei fehlenden Dimensionen verteilt sich das Gewicht auf die verfügbaren. Für eine Kompetenz ohne Stichwörter verwendet das Werkzeug deren genaue Bezeichnung. Ohne vergleichbare Fakten oder Kompetenzen bleibt der automatische Score offen.
+Der Abgleich gewichtet Begriffe der Anzeige, die im bestätigten CV-Korpus vorkommen, mit 55 Prozent. Vergleichsgrundlage sind bestätigte Fakten, ihre Stichwörter und Übersetzungen. Mit 25 Prozent zählt die Abdeckung der hinterlegten Kompetenzen. Die übrigen 20 Prozent entfallen auf Zielrolle und Struktur. Die Ausgabe führt Worttreffer, fehlende Worttreffer, tatsächliche Nachweislücken und unbekannte Kriterien getrennt. Bei fehlenden Dimensionen wird über die verfügbaren Gewichte gemittelt. Der manuelle Score hat immer Vorrang, einschließlich null Punkten.
 
-Eine manuelle Bewertung hat Vorrang, auch bei null Punkten. Die Liste sortiert nach dem wirksamen Score. Muss-Kriterien, Gehaltswunsch, Mobilität und Arbeitsmodell aus dem Interview sind als persönliche Prüfpunkte sichtbar. Gleiche die Anforderungen mit dem Original ab. Synonyme, Verneinungen und fachliche Tiefe brauchen eine inhaltliche Prüfung.
+Für den Strukturanteil kannst du unter `preferences` in der privaten `profil.json` die Faktoren `titel`, `senioritaet`, `ort`, `sprache`, `gehalt`, `erfahrung` und `musskriterium` gewichten. Standardgewicht ist jeweils 1. Ein Gewicht von 0 nimmt einen Faktor aus dem Score. Ungeprüfte Faktoren bleiben offen. Mit `strukturregeln` lassen sich vollständige, eindeutige Arbeitgeberangaben aus der Anzeige gegen persönliche Bedingungen vergleichen; widersprüchliche Treffer bleiben offen. Beispiel für einen Ausschnitt aus den eigenen Präferenzen:
+
+```json
+{
+  "strukturgewichte": {"titel": 1, "ort": 2, "erfahrung": 3},
+  "strukturregeln": {"ort": {"passt": ["Arbeitsort Leipzig"], "luecke": ["Arbeitsort München"]}},
+  "erfahrungsfelder": {"leitung": ["Führungserfahrung", "leadership experience"]}
+}
+```
+
+Bei einem konfigurierten Erfahrungsfeld vergleicht der Assistent ausdrücklich genannte Mindestjahre mit einschlägigen Jahresangaben in bestätigten Fakten. „Mindestens 5 Jahre Führungserfahrung“ und ein Nachweis über 3 Jahre ergeben eine dokumentierte Nachweislücke. Ohne vergleichbare Angabe bleibt die belegte Dauer offen. Mehrere möglicherweise überlappende Zeitangaben werden nicht addiert.
+
+Mit `strukturcheck` kannst du einen Einzelfall genauer dokumentieren. Für Erfahrung und Muss-Kriterien braucht ein Urteil über Passung oder Lücke eine bestätigte Fakten-ID. Beispiel mit fiktiven Werten:
+
+```sh
+python start.py strukturcheck JOB-ID --kriterium erfahrung --name leitung --anzeige "5 Jahre Führungserfahrung" --gefordert-jahre 5 --belegt-jahre 3 --fakt leitung-1 --grund "Mit der bestätigten Tätigkeitsdauer abgeglichen."
+python start.py strukturcheck JOB-ID --kriterium ort --anzeige "Arbeitsort Leipzig" --urteil ausnahme --grund "Für diese konkrete Stelle ist die Anfahrt persönlich akzeptiert."
+```
+
+Die Anzeigenpassage muss im gespeicherten Text vorkommen. Eine bewusste Ausnahme gilt nur für die gewählte Stelle. Die Historie bleibt erhalten. Ändern sich die zugrunde liegenden Profilfakten, persönliche Bedingungen oder die Anzeige, erscheint das frühere Urteil zur erneuten Prüfung als offen.
 
 ## Gehaltsangaben belegen
 

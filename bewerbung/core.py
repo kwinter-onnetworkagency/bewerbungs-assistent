@@ -141,6 +141,12 @@ def draft_fingerprint(item, profile):
     return hashlib.sha256(json.dumps(value, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
 
 
+def decision_status(events, fallback):
+    priority = {"beworben": 1, "interview": 2, "angebot": 3, "absage": 4, "zurueckgezogen": 4}
+    dated = [e for e in events if e["status"] in priority]
+    return max(enumerate(dated), key=lambda pair: (pair[1]["occurred_on"], priority[pair[1]["status"]], pair[0]))[1]["status"] if dated else fallback
+
+
 class Workspace:
     def __init__(self, root):
         self.root = Path(root).expanduser().resolve()
@@ -340,11 +346,18 @@ class Workspace:
                             if updated != previous["mail"]:
                                 previous.setdefault("mail_history", []).append(dict(previous["mail"], revised_at=now()))
                                 previous["mail"] = updated
+                                if updated.get("time_source") == "empfang":
+                                    from .mailstand import timezone
+                                    previous["occurred_on"] = dt.datetime.fromisoformat(updated["mail_at"]).astimezone(timezone(updated["report_zone"])).date().isoformat()
+                                    item["status"] = decision_status(item["events"], item["status"])
                                 write(self.path("bewerbungen.json"), jobs)
                                 return True
                         if mail and not previous.get("mail"):
                             proof = self.evidence(source, expected_hash=mail["sha256"], for_submission=status == "beworben")
                             previous["mail"] = dict(mail, captured_at=now(), original=proof)
+                            if mail.get("time_source") == "empfang":
+                                previous["occurred_on"] = occurred
+                                item["status"] = decision_status(item["events"], item["status"])
                             write(self.path("bewerbungen.json"), jobs)
                             return True
                         return False
@@ -373,12 +386,7 @@ class Workspace:
                     "facts": [f for f in self.profile()["facts"] if f["id"] in item["draft"]["fact_ids"]]})
             item["events"].append(event)
             # Older backfills are history, never a newer selection decision.
-            dated = [e for e in item["events"] if e["status"] in EVIDENCE_REQUIRED]
-            if dated:
-                priority = {"beworben": 1, "interview": 2, "angebot": 3, "absage": 4, "zurueckgezogen": 4}
-                item["status"] = max(enumerate(dated), key=lambda pair: (pair[1]["occurred_on"], priority[pair[1]["status"]], pair[0]))[1]["status"]
-            elif not informational:
-                item["status"] = status
+            item["status"] = decision_status(item["events"], item["status"] if informational else status)
             write(self.path("bewerbungen.json"), jobs)
             return True
 

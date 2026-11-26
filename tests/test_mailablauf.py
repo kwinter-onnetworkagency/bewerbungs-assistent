@@ -124,6 +124,8 @@ class MailTest(unittest.TestCase):
         event = self.w.jobs()[0]["events"][0]
         self.assertEqual(event["occurred_on"], "2026-02-11")
         self.assertTrue(event["mail"]["header_date"].startswith("2026-02-10"))
+        self.capture("eingang", "--stelle", self.j, "--empfangen", "2026-02-12T00:10:00+00:00")
+        self.assertEqual(self.w.jobs()[0]["events"][0]["occurred_on"], "2026-02-12")
         archive = self.file.parent / "quittung.json"
         archive.write_text('{ "dateien": [], "typ" : "portal_vorbereitung" }', encoding="utf8")
         with self.assertRaisesRegex(ValueError, "kein Versandbeleg"):

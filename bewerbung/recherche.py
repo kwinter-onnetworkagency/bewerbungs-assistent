@@ -304,7 +304,7 @@ def tokens(value):
 
 def assessment_source(profile, job):
     prefs = profile.get("preferences", {})
-    relevant = {k: v for k, v in prefs.items() if k in ("seniority", "salary", "work_model", "mobility", "must_haves", "exceptions")}
+    relevant = {k: v for k, v in prefs.items() if k in ("seniority", "salary", "work_model", "mobility", "must_haves", "exceptions", "strukturregeln", "erfahrungsfelder")}
     basis = [job["description"], job["role"], profile.get("location"), profile["facts"], relevant, profile["target_roles"]]
     return hashlib.sha256(json.dumps(basis, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
 
@@ -358,10 +358,13 @@ def experience_checks(profile, job):
         years = rf"(\d{{1,2}})\+?\s+(?:Jahre[n]?|years?)\s+(?:(?:mit|in|of)\s+)?(?:{terms_re})\b"
         def collect(value, prefix):
             matches = []
-            for sentence in re.split(r"[.!?;\n]", value):
+            for sentence in re.split(r"[!?;\n]|\.(?!\d)", value):
                 if re.search(r"\b(?:kein\w*|nicht|wünschenswert|höchstens|optional|preferred|not|pluspunkt)\b", sentence, re.I):
                     continue
-                matches.extend((int(m[1]), m[0]) for m in re.finditer(prefix + years, sentence, re.I))
+                for match in re.finditer(prefix + years, sentence, re.I):
+                    if re.search(r"\d\s*(?:[-–]|bis|to)\s*$", sentence[:match.start()], re.I):
+                        continue
+                    matches.append((int(match[1]), match[0]))
             return matches
         requested = collect(job["description"], r"\b(?:mindestens|minimum of|at least)\s+")
         if not requested:
@@ -377,6 +380,30 @@ def experience_checks(profile, job):
     return results
 
 
+def structural_rules(profile, job):
+    rules = profile.get("preferences", {}).get("strukturregeln", {})
+    if not isinstance(rules, dict) or rules.keys() - {"ort", "sprache", "senioritaet", "gehalt"}:
+        raise ValueError("strukturregeln unterstützt ort, sprache, senioritaet und gehalt.")
+    # Nur volle Sätze / Zeilen treffen; „kein Homeoffice“ darf „Homeoffice“ nicht erfüllen.
+    statements = {s.strip().rstrip(".!?:").casefold(): s.strip() for s in
+                  re.split(r"\n+|(?<=[.!?])\s+", job["description"]) if s.strip()}
+    for factor, by_verdict in rules.items():
+        if not isinstance(by_verdict, dict) or by_verdict.keys() - {"passt", "luecke"}:
+            raise ValueError("Jede Strukturregel benötigt Listen unter passt oder luecke.")
+        hits = {}
+        for verdict, options in by_verdict.items():
+            if not isinstance(options, list):
+                raise ValueError("Strukturregel benötigt eine Liste vollständiger Arbeitgeberangaben.")
+            for option in choice_list(options):
+                phrase = statements.get(option.rstrip(".!?:").casefold())
+                if phrase:
+                    hits[verdict] = phrase
+        if hits:
+            yield dict(kriterium=factor, name=factor, urteil=next(iter(hits)) if len(hits) == 1 else "offen",
+                       anzeige=" / ".join(hits.values()), grund="Vollständige Anzeigenangabe gegen persönliche Strukturregel geprüft.",
+                       fakten=[], automatisch=True)
+
+
 def structure(profile, job, title_hit):
     configured = profile.get("preferences", {}).get("strukturgewichte", {})
     if (not isinstance(configured, dict) or configured.keys() - set(STRUCTURE) or
@@ -387,8 +414,8 @@ def structure(profile, job, title_hit):
     result = []
     source = assessment_source(profile, job)
     latest = {(r["kriterium"], r["name"]): r for r in job.get("strukturpruefungen", [])}
-    for item in experience_checks(profile, job):
-        latest.setdefault(("erfahrung", item["name"]), dict(item, basis=source))
+    for item in [*structural_rules(profile, job), *experience_checks(profile, job)]:
+        latest.setdefault((item["kriterium"], item["name"]), dict(item, basis=source))
     for factor in STRUCTURE[1:]:
         values = []
         for (key, _), row in latest.items():
