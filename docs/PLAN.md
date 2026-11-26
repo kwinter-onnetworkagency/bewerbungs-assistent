@@ -1,4 +1,6 @@
-# Öffentliche Startversion
+# Ursprünglicher Plan für die öffentliche Startversion
+
+Dieser Plan dokumentiert die erste Ausbaustufe. Die Funktionen der veröffentlichten Version stehen im [Funktionsverzeichnis](FUNKTIONSUMFANG.md).
 
 Ziel: Anderen Stellensuchenden denselben belegorientierten Bewerbungsablauf zugänglich machen. Persönlicher Zuschnitt entsteht im Interview, nicht durch feste Kandidatenwerte.
 

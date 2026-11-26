@@ -1,5 +1,10 @@
 # Änderungen
 
+## 26.11.2026 · Version 1.0.0
+
+- Erste Hauptversion mit 19 Kurzbefehlen für den persönlichen Bewerbungsablauf.
+- Installations- und Updateanleitung, Dashboard-Beispiele, Hinweise zur Portfolio-Verschlüsselung und direkte Kundenregistrierung im Domain-Wizard aktualisiert.
+
 ## 26.11.2026 · Version 0.6.0
 
 - Stellenbezogene Lebensläufe und Anschreiben, dokumentierte ATS-Prüfung, geprüfte Uploadpakete und tatsächliche Versandfassungen.

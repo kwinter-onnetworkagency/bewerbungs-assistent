@@ -11,7 +11,7 @@ Die Vorlagen funktionieren in einem privaten ChatGPT- oder Claude-Projekt. Im lo
 **Mit lokalem Arbeitsordner:** Installiere bei Bedarf [Node.js ab Version 20 mit npm](https://nodejs.org/) und [Git](https://git-scm.com/downloads). Starte einmal im Terminal:
 
 ```sh
-npx github:kwinter-onnetworkagency/bewerbungs-assistent#v0.6.0
+npx github:kwinter-onnetworkagency/bewerbungs-assistent#v1.0.0
 ```
 
 Das persönliche Portfolio ist mit **Ja** voreingestellt. Danach fragt der Wizard, ob du eine eigene Domain besitzt. Du kannst eine vorhandene Domain verbinden, eine neue bei on:NetworkAgency oder Cloudflare registrieren oder mit einer kostenlosen Pages-Adresse starten. [Portfolio einrichten](docs/PORTFOLIO.md)
@@ -57,7 +57,7 @@ Für ein Onlineformular kannst du die tatsächlich vorhandenen Felder erkunden, 
 
 Auf macOS lässt sich ein ausgewähltes persönliches Apple-Mail-Konto lesen. Auf anderen Systemen kannst du Originalnachrichten als EML bereitstellen. Empfangsbestätigung, Interview und Absage stehen getrennt im Verlauf. Bestätigte Kontakte und Termine kannst du als vCard und Kalenderdatei übernehmen. [Mail und Routinen](docs/ROUTINEN.md) · [Kontakte und Termine](docs/TERMINE.md)
 
-Die [Funktionsübersicht für Version 0.6.0](docs/FUNKTIONSUMFANG.md) nennt für jede Aufgabe den lokalen Befehl, die Voraussetzungen und den Arbeitsweg im privaten Browserprojekt.
+Die [Funktionsübersicht für Version 1.0.0](docs/FUNKTIONSUMFANG.md) nennt für jede Aufgabe den lokalen Befehl, die Voraussetzungen und den Arbeitsweg im privaten Browserprojekt.
 
 ## Deine Daten
 
@@ -84,6 +84,6 @@ python3 scripts/smoke.py
 
 Die CI prüft Linux, Windows und macOS. Eine Anmeldung in fremden ChatGPT-/Claude-Konten oder der echte Versand einer Bewerbung gehören nicht zu diesen Tests. Projektaufbau: [ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-Im [Funktionsverzeichnis](docs/FUNKTIONSUMFANG.md) findest du alle Kurzbefehle mit ihren lokalen Werkzeugen und Voraussetzungen.
+[Release 1.0.0 und Downloads](https://github.com/kwinter-onnetworkagency/bewerbungs-assistent/releases/tag/v1.0.0) · [Beispielübersichten als ZIP](https://github.com/kwinter-onnetworkagency/bewerbungs-assistent/releases/download/v1.0.0/Beispiel-Uebersichten.zip)
 
 Lizenz: [MIT](LICENSE).

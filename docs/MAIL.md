@@ -7,7 +7,7 @@ Mit `/mail` startest du den Abgleich in deinem Assistenten. Lege im Interview fe
 Unter macOS zeigt `apple-mail konten` die in Apple Mail eingerichteten Konten und `apple-mail ordner --konto NAME` deren Ordner. Beim ersten Zugriff kann macOS nach der Berechtigung zur Steuerung von Mail fragen. Suche die tatsächlichen Namen des Posteingangs, des Gesendet-Ordners und deines Ablageordners. Für jeden freigegebenen Ordner einzeln abrufen. Beispiel für den Aufruf aus einem persönlichen Arbeitsordner:
 
 ```sh
-npx github:kwinter-onnetworkagency/bewerbungs-assistent#v0.6.0 run apple-mail abruf --konto Privat --ordner INBOX --seit 2026-01-15T09:00:00+01:00
+npx github:kwinter-onnetworkagency/bewerbungs-assistent#v1.0.0 run apple-mail abruf --konto Privat --ordner INBOX --seit 2026-01-15T09:00:00+01:00
 ```
 
 Ersetze Datum, Ordner und Konto durch deinen letzten belegten Abgleich. Apple Mail öffnet sich und fordert neue Nachrichten an. Das private Manifest verzeichnet die lokal gelesenen Originale, Message-IDs und Abruffehler. Ein vollständiger Serverabgleich kann nach dem Anfordern noch ausstehen. Ohne Apple Mail kannst du auf allen Plattformen eine Originalnachricht als EML exportieren.

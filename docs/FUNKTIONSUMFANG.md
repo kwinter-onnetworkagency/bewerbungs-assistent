@@ -1,6 +1,6 @@
 # Funktionen und Voraussetzungen
 
-Die folgenden Wege gelten für Version 0.6.0. Im persönlichen Arbeitsordner zeigt `python start.py --help` die verfügbaren Befehle. Mit `python start.py BEFEHL --help` erhältst du die Optionen für deinen nächsten Schritt. In Claude Code sprichst du einen Skill mit `/name` an, in Codex mit `$name`. In einem privaten Browserprojekt schreibst du die Aufgabe als Nachricht.
+Die folgenden Wege gelten für Version 1.0.0. Im persönlichen Arbeitsordner zeigt `python start.py --help` die verfügbaren Befehle. Mit `python start.py BEFEHL --help` erhältst du die Optionen für deinen nächsten Schritt. In Claude Code sprichst du einen Skill mit `/name` an, in Codex mit `$name`. In einem privaten Browserprojekt schreibst du die Aufgabe als Nachricht.
 
 | Aufgabe und Kurzbefehle | Lokaler Arbeitsweg und Ergebnis | Im privaten Browserprojekt |
 |---|---|---|

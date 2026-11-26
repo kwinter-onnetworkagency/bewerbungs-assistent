@@ -1,6 +1,8 @@
 # Mein Bewerbungsarbeitsplatz
 
-Öffne `exports/Dashboard.html` aus deinem persönlichen Ordner. Für den ersten Blick kannst du im Menü **Arbeitsstand laden** die fiktive Datei [Beispiel-Arbeitsstand](https://github.com/kwinter-onnetworkagency/bewerbungs-assistent/releases/download/v0.6.0/dashboard-demo.json) auswählen. Bei einer lokalen Installation lädt dasselbe Menü deine eigene `bewerbungen.json`. Das Laden erfolgt im Browser auf deinem Gerät. Die mit persönlichen Daten erzeugte HTML-Datei gehört in deinen privaten Ordner.
+Zum Ausprobieren kannst du die [Dashboard-Demo](https://github.com/kwinter-onnetworkagency/bewerbungs-assistent/releases/download/v1.0.0/Dashboard-Demo.html) herunterladen und im Browser öffnen. Sie enthält fiktive Stellen. Für die verlinkten Einzelmappen entpacke die [Beispielübersichten](https://github.com/kwinter-onnetworkagency/bewerbungs-assistent/releases/download/v1.0.0/Beispiel-Uebersichten.zip) und öffne darin `Dashboard.html`.
+
+Öffne `exports/Dashboard.html` aus deinem persönlichen Ordner. Für den ersten Blick kannst du im Menü **Arbeitsstand laden** die fiktive Datei [Beispiel-Arbeitsstand](https://github.com/kwinter-onnetworkagency/bewerbungs-assistent/releases/download/v1.0.0/dashboard-demo.json) auswählen. Bei einer lokalen Installation lädt dasselbe Menü deine eigene `bewerbungen.json`. Das Laden erfolgt im Browser auf deinem Gerät. Die mit persönlichen Daten erzeugte HTML-Datei gehört in deinen privaten Ordner.
 
 | Ansicht | Wofür du sie verwendest |
 |---|---|

@@ -15,6 +15,8 @@
 
 ## Erledigt
 
+- 26.11.2026: Version 1.0.0 mit Installationswegen für Browser und Terminal sowie Update bestehender Arbeitsordner.
+
 - 26.11.2026: Stellenbezogene Unterlagen, Anlagenpakete, Portalvorbereitung, Quellenrecherche, empfängerbezogene Portfolios, Mailberichte, Kontakte und Gesprächstermine.
 
 - Portfolio-Wizard mit Domainwahl und Registrierungswegen veröffentlicht.
