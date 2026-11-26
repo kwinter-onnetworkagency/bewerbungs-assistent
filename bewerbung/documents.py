@@ -46,6 +46,7 @@ class Document:
     page_break: int | None = None
     image: tuple[bytes, int, int] | None = None
     image_position: int = 0
+    date_index: int | None = None
 
 
 def prepare(workspace, kind, *, job_id=None, language='de', fact_ids=(), letter_date=None, recipient=(),
@@ -68,7 +69,7 @@ def prepare(workspace, kind, *, job_id=None, language='de', fact_ids=(), letter_
     if portfolio:
         paragraphs.append('Portfolio: ' + url(portfolio))
     headings, keep_next = set(), set()
-    page_break = None
+    page_break = date_index = None
     stem = (job_id + '-' if job else '') + kind + ('-en' if language == 'en' else '')
     if layout == 'design':
         stem += '-design'
@@ -91,6 +92,7 @@ def prepare(workspace, kind, *, job_id=None, language='de', fact_ids=(), letter_
                 raise ValueError('Briefdatum im Format JJJJ-MM-TT angeben.') from None
             if stamp.isoformat() != letter_date:
                 raise ValueError('Briefdatum im Format JJJJ-MM-TT angeben.')
+            date_index = len(paragraphs) + 1
             paragraphs += ['', stamp.strftime('%d.%m.%Y') if language == 'de' else stamp.isoformat()]
         paragraphs.append('')
         headings.add(len(paragraphs))
@@ -148,7 +150,7 @@ def prepare(workspace, kind, *, job_id=None, language='de', fact_ids=(), letter_
         position = len(paragraphs) - 1
     image = _picture(workspace, photo or signature, signature=bool(signature)) if photo or signature else None
     return Document(stem, paragraphs, headings, selected, language, profile['name'], job_id or '', kind,
-                    layout, compact, keep_next, page_break, image, position)
+                    layout, compact, keep_next, page_break, image, position, date_index)
 
 
 def _picture(workspace, source, *, signature):
@@ -205,7 +207,7 @@ def _save_new(path, data):
 
 
 def docx(path, paragraphs, *, headings=(), language='de', author='', subject='', layout='ats',
-         compact=False, keep_next=(), page_break=None, image=None, image_position=0):
+         compact=False, keep_next=(), page_break=None, image=None, image_position=0, date_index=None):
     body = []
     for index, line in enumerate(paragraphs):
         if image and index == image_position:
@@ -222,6 +224,8 @@ def docx(path, paragraphs, *, headings=(), language='de', author='', subject='',
             style += '<w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/>'
         elif layout == 'design':
             style += '<w:spacing w:after="50"/>'
+        if index == date_index:
+            style += '<w:jc w:val="right"/>'
         if heading:
             style += '<w:outlineLvl w:val="0"/>'
         run = '<w:rFonts w:ascii="Arial" w:hAnsi="Arial"/>' if layout == 'design' else ''
@@ -229,7 +233,10 @@ def docx(path, paragraphs, *, headings=(), language='de', author='', subject='',
             run += '<w:b/>'
             if layout == 'design':
                 run += '<w:color w:val="244559"/>'
-        run += '<w:sz w:val="' + ('32' if index == 0 else '21' if compact else '22') + '"/>'
+        size = 21 if compact else 22
+        if index == 0:
+            size = 36 if layout == 'design' else 32
+        run += f'<w:sz w:val="{size}"/>'
         run += '<w:lang w:val="' + ('en-US' if language == 'en' else 'de-DE') + '"/>'
         body.append(f'<w:p><w:pPr>{style}</w:pPr><w:r><w:rPr>{run}</w:rPr><w:t xml:space="preserve">{escape(line)}</w:t></w:r></w:p>')
     document = (f'<w:document xmlns:w="{W}"><w:body>' + ''.join(body) +
@@ -280,7 +287,7 @@ def _render_file(path, document, compact):
     docx(path, document.paragraphs, headings=document.headings, language=document.language,
          author=document.author, subject=document.job_id, layout=document.layout, compact=compact,
          keep_next=document.keep_next, page_break=document.page_break, image=document.image,
-         image_position=document.image_position)
+         image_position=document.image_position, date_index=document.date_index)
 
 
 def save(workspace, document):
@@ -323,15 +330,19 @@ def render(workspace, jid=None):
     return save(workspace, prepare(workspace, 'anschreiben' if jid else 'lebenslauf', job_id=jid))
 
 
+def office_binary():
+    binary = shutil.which('soffice') or shutil.which('libreoffice')
+    candidates = [Path('/Applications/LibreOffice.app/Contents/MacOS/soffice'),
+                  Path(os.environ.get('ProgramFiles', 'C:/Program Files')) / 'LibreOffice/program/soffice.exe']
+    return binary or next((str(p) for p in candidates if p.is_file()), None)
+
+
 def convert_pdf(path):
     path = Path(path).resolve()
     target = path.with_suffix('.pdf')
     if target.exists() or target.is_symlink():
         raise ValueError('PDF existiert bereits. Anderen Dateinamen verwenden.')
-    binary = shutil.which('soffice') or shutil.which('libreoffice')
-    candidates = [Path('/Applications/LibreOffice.app/Contents/MacOS/soffice'),
-                  Path(os.environ.get('ProgramFiles', 'C:/Program Files')) / 'LibreOffice/program/soffice.exe']
-    binary = binary or next((str(p) for p in candidates if p.is_file()), None)
+    binary = office_binary()
     if not binary:
         raise ValueError(f'DOCX gespeichert: {path}. Für PDF LibreOffice lokal installieren oder in Word als PDF exportieren.')
     with tempfile.TemporaryDirectory() as temp:

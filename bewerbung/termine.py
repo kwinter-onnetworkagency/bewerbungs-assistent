@@ -1,6 +1,7 @@
 """Persönliche Gesprächsmappen, vCards und Kalendereinträge im Arbeitsordner."""
 from datetime import datetime, timezone
 import hashlib
+import json
 import os
 from pathlib import Path
 import re
@@ -10,7 +11,7 @@ import unicodedata
 import uuid
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from .core import identifier, read, text, url, write_bytes
+from .core import identifier, read, text, url, write, write_bytes
 
 
 def register(commands):
@@ -18,8 +19,10 @@ def register(commands):
     contact.add_argument('id', help='Stellen-ID')
     contact.add_argument('--name', required=True, help='Anzeigename der Kontaktperson')
     contact.add_argument('--email', required=True, help='Bestätigte berufliche E-Mail-Adresse')
-    for field in ('vorname', 'nachname', 'funktion', 'telefon', 'strasse', 'plz', 'stadt', 'region', 'land', 'website'):
+    for field in ('vorname', 'nachname', 'funktion', 'abteilung', 'strasse', 'plz', 'stadt', 'region', 'land', 'website'):
         contact.add_argument('--' + field)
+    for field in ('telefon', 'mobil', 'fax'):
+        contact.add_argument('--' + field, action='append', default=[], help='Berufliche Nummer, wiederholbar')
     meeting = commands.add_parser('termin', help='Bestätigten Gesprächstermin als private Kalenderdatei sichern')
     meeting.add_argument('id', help='Stellen-ID')
     meeting.add_argument('--runde', required=True, help='Dauerhafte Runden-ID, z. B. fachrunde')
@@ -28,9 +31,13 @@ def register(commands):
     meeting.add_argument('--quelle', required=True, help='Für die Kalenderbeschreibung freigegebene Bezeichnung der Einladung')
     meeting.add_argument('--zeitzone', help='Optionale zusätzliche Ortszeitprüfung, z. B. Europe/Berlin')
     meeting.add_argument('--ort', help='Bestätigter Ort oder Besprechungslink')
+    meeting.add_argument('--vormerkung', action='store_true', help='Ausdrückliche persönliche Vormerkung eines Terminvorschlags')
+    meeting.add_argument('--kalender', help='Eindeutiger Name des Zielkalenders für --mac')
     for parser in (contact, meeting):
         parser.add_argument('--aktualisieren', action='store_true', help='Bekannten Kontakt oder Termin mit gleicher UID aktualisieren')
-        parser.add_argument('--oeffnen', action='store_true', help='Diese Datei ausdrücklich an das gewählte Standardprogramm übergeben')
+        mode = parser.add_mutually_exclusive_group()
+        mode.add_argument('--mac', action='store_true', help='Datensatz in der lokalen macOS-App anlegen und zurücklesen')
+        mode.add_argument('--oeffnen', action='store_true', help='Diese Datei ausdrücklich an das gewählte Standardprogramm übergeben')
     pack = commands.add_parser('gespraechsmappe', help='Private Vor- und Nachbereitung für eine einzelne Gesprächsrunde')
     pack.add_argument('id', help='Stellen-ID')
     pack.add_argument('--runde', required=True)
@@ -91,7 +98,12 @@ def contact(workspace, job, args):
     parts = [_escape(_single(v, 'Namensbestandteil')) if v else '' for v in (family, given)]
     lines = ['BEGIN:VCARD', 'VERSION:4.0', uid, 'FN:' + _escape(name), 'N:' + ';'.join([*parts, '', '', '']),
              'ORG:' + _escape(_single(job['company'], 'Unternehmen')), 'EMAIL:' + _escape(email)]
-    for field, value in [('TITLE:', args.funktion), ('TEL;VALUE=text:', args.telefon)]:
+    if args.abteilung:
+        lines[-2] += ';' + _escape(_single(args.abteilung, 'Abteilung'))
+    for label, numbers in [('work', args.telefon), ('cell', args.mobil), ('fax', args.fax)]:
+        for number in dict.fromkeys(numbers):
+            lines.append(f'TEL;TYPE={label};VALUE=text:' + _escape(_single(number, 'Telefonnummer')))
+    for field, value in [('TITLE:', args.funktion)]:
         if value:
             lines.append(field + _escape(_single(value, field)))
     if any((args.strasse, args.stadt, args.region, args.plz, args.land)):
@@ -132,9 +144,13 @@ def meeting(workspace, job, args):
     folder = _round(workspace, job, args.runde)
     uid = 'UID:' + _uid(workspace, 'termin:' + job['id'] + ':' + args.runde)
     title = _single(f"{job['company']}, {job['role']}, {args.runde}", 'Termintitel', 1000)
+    if args.vormerkung:
+        title = 'Vormerkung · ' + title
     lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Bewerbungs-Assistent//DE', 'BEGIN:VEVENT', uid,
              'DTSTART:' + start, 'DTEND:' + end, 'SUMMARY:' + _escape(title),
              'DESCRIPTION:' + _escape(_single(args.quelle, 'Einladungsquelle')), 'CLASS:PRIVATE']
+    if args.vormerkung:
+        lines.append('STATUS:TENTATIVE')
     if args.ort:
         lines.append('LOCATION:' + _escape(_single(args.ort, 'Ort', 2000)))
     tail = ['END:VEVENT', 'END:VCALENDAR']
@@ -253,9 +269,63 @@ def folder_for_round(workspace, job, args):
     return prep, follow
 
 
+def native_request(args, w, job):
+    if args.command == 'kontakt':
+        fields = {'firstName': args.vorname or (args.name if not args.nachname else ''),
+                  'lastName': args.nachname or '', 'organization': job['company'],
+                  'jobTitle': args.funktion, 'department': args.abteilung}
+        phones = [{'label': label, 'value': number} for label, numbers in
+                  [('work', args.telefon), ('mobile', args.mobil), ('work fax', args.fax)]
+                  for number in dict.fromkeys(numbers)]
+        address = {k: v for k, v in [('street', args.strasse), ('city', args.stadt), ('state', args.region),
+                                      ('zip', args.plz), ('country', args.land)] if v}
+        return {'kind': 'contact', 'email': args.email.strip(),
+                'fields': {k: v.strip() for k, v in fields.items() if v}, 'phones': phones,
+                'address': address, 'website': args.website}
+    title = f"{job['company']}, {job['role']}, {args.runde}"
+    return {'kind': 'event', 'calendar': _single(args.kalender, 'Zielkalender'),
+            'uid': _uid(w, 'termin:' + job['id'] + ':' + args.runde),
+            'title': ('Vormerkung · ' if args.vormerkung else '') + title,
+            'start': datetime.fromisoformat(args.start).astimezone(timezone.utc).isoformat(),
+            'end': datetime.fromisoformat(args.ende).astimezone(timezone.utc).isoformat(),
+            'description': args.quelle.strip(), 'location': (args.ort or '').strip(),
+            'status': 'tentative' if args.vormerkung else 'confirmed'}
+
+
+def sync_native(args, w, job, path):
+    request = native_request(args, w, job)
+    statefile = w.path(path.with_suffix('.native.json'))
+    state = read(statefile) if statefile.exists() else {}
+    payload = dict(request, previous=state.get('native_id'), update=args.aktualisieren)
+    if state.get('calendar') and state['calendar'] != request.get('calendar'):
+        raise ValueError('Bereits einem anderen Kalender zugeordnet. Bestehenden Eintrag zuerst prüfen.')
+    fingerprint = hashlib.sha256(json.dumps(request, sort_keys=True).encode()).hexdigest()
+    if state.get('pending') and state['pending'] != fingerprint:
+        raise ValueError('Frühere Übernahme offen. Zuerst den ursprünglichen Aufruf wiederholen und den Bestand prüfen.')
+    state.update(pending=fingerprint, calendar=request.get('calendar'))
+    write(statefile, state)
+    adapter = Path(__file__).resolve().parents[1] / 'resources' / 'native-termine.js'
+    child = subprocess.run(['osascript', '-l', 'JavaScript', str(adapter)], input=json.dumps(payload), text=True,
+                           capture_output=True, timeout=120)
+    if child.returncode:
+        raise ValueError('Native Übernahme offen. ' + child.stderr.strip()[:600])
+    reply = json.loads(child.stdout)
+    if not isinstance(reply, dict) or reply.get('verified') is not True or not isinstance(reply.get('id'), str) or not reply['id']:
+        raise ValueError('Rücklesen fehlgeschlagen. Ursprüngliche Übernahme vor einem neuen Eintrag prüfen.')
+    write(statefile, {'native_id': reply['id'], 'calendar': request.get('calendar'), 'fingerprint': fingerprint,
+                      'verified_at': datetime.now(timezone.utc).isoformat()})
+
+
 def run(args, workspace):
     if args.command not in ('kontakt', 'termin', 'gespraechsmappe'):
         return False
+    if getattr(args, 'mac', False):
+        if sys.platform != 'darwin':
+            raise ValueError('Die native Übernahme benötigt macOS. VCF und ICS sind plattformübergreifend verfügbar.')
+        if args.command == 'termin' and not args.kalender:
+            raise ValueError('--mac braucht einen ausdrücklich benannten --kalender.')
+    elif getattr(args, 'kalender', None):
+        raise ValueError('--kalender gilt für die native Übernahme mit --mac.')
     with workspace.locked():
         job = workspace.job(workspace.jobs(), args.id)
         if args.command == 'gespraechsmappe':
@@ -263,7 +333,11 @@ def run(args, workspace):
                 print(path)
             return True
         path = contact(workspace, job, args) if args.command == 'kontakt' else meeting(workspace, job, args)
+        if args.mac:
+            sync_native(args, workspace, job, path)
     print(path)
+    if args.mac:
+        print('Nativer Datensatz zurückgelesen und zugeordnet.')
     if args.oeffnen:
         if sys.platform == 'win32':
             os.startfile(str(path))

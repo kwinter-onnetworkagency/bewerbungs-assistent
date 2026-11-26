@@ -175,12 +175,19 @@ def report_pages(workspace, jobs, template):
             label = "Eingangsbestätigung" if mail and kind == "eingang" else kind
             entry = (f'<article><h3>{esc(event["occurred_on"])} · {esc(label)}</h3><p>Ereignis {number} · '
                      f'Erfasst {esc(event["recorded_at"][:10])}</p><p>{esc(event["note"])}</p>')
+            if mail.get("original"):
+                mail_file = evidence_file(workspace, {"evidence": mail["original"]})
+                if mail_file and mail_file != proof:
+                    entry += "<p>" + local_link(workspace, mail_file, "Nachgetragenes Mailoriginal öffnen") + "</p>"
             if mail:
                 entry += f'<p>{esc(mail.get("subject", ""))} · {esc(mail.get("mail_at", ""))}</p>'
             association = event.get("eingereichtes_paket") or {}
             if kind == "beworben":
                 version = association.get("fassung")
                 assignment = f'Zugeordnete Fassung: {esc(version)}' if version else "Paketfassung offen"
+                if version:
+                    method = "PDF-Anhangshashes der Originalmail" if association.get("zuordnung") == "anhang_hash" else "persönliche Zuordnung"
+                    assignment += " · " + method
                 if version and version not in valid_versions:
                     assignment += " · Dateien nicht verifiziert"
                 entry += f'<p>{assignment}</p>'
@@ -219,7 +226,8 @@ def report_pages(workspace, jobs, template):
         if packet or submissions:
             packages.append(f'<h2>{job_link}</h2>' + (packet or "<p>Paketfassung offen.</p>"))
             for when, _, assoc in submissions:
-                packages.append(f'<p>Eingereicht am {esc(when)} · {esc(assoc.get("fassung") or "Zuordnung offen")}</p>')
+                method = {"anhang_hash": "PDF-Anhangshashes", "nutzerzuordnung": "persönliche Zuordnung"}.get(assoc.get("zuordnung"), "Zuordnungsart offen")
+                packages.append(f'<p>Eingereicht am {esc(when)} · {esc(assoc.get("fassung") or "Zuordnung offen")} · {method}</p>')
     groups = []
     for key, records in sorted(cohorts.items()):
         ages = [age for _, age, _ in records]
@@ -231,7 +239,7 @@ def report_pages(workspace, jobs, template):
     included = sum(map(len, cohorts.values()))
     page("Kohorten.html", "Kohorten", f'<p>Stand {today} · {included} von {len(jobs)} Stellen mit datierter und belegter Einreichung. '
          'Je Stelle zählt die erste belegte Einreichung. Gruppen zeigen Vorlage, Version und Versandkanal. '
-         'Die Zählung verwendet den aktuellen Bewerbungsstatus.</p>' + "".join(groups))
+         'Vorlagen- und Kanalangaben stammen aus der persönlichen Versandzuordnung. Die Zählung verwendet den aktuellen Bewerbungsstatus.</p>' + "".join(groups))
     page("Screening.html", "Screening", "".join(screening) or "<p>Keine Stellen erfasst.</p>")
     page("Pakete.html", "Paketübersicht", "".join(packages) or "<p>Keine Pakete oder Einreichungen erfasst.</p>")
 
@@ -261,12 +269,16 @@ def dashboard(workspace, jobs):
     write_bytes(workspace.path("exports", "Dashboard.html"), (before + marker + payload + end + after).encode("utf-8"))
 
 
-def chat_bundle(workspace):
+def chat_bundle(workspace, *, contact=False, salary=False):
     """Four chosen files; source documents stay local. User reviews all exported text."""
     profile = workspace.profile()
     # Sources may contain local paths or private document links. Export facts, not those locations.
-    preference_keys = {"location", "contact", "roles", "work_model", "mobility", "seniority", "salary", "availability",
-                       "industries", "must_haves", "exceptions", "writing", "attachments", "search", "mail", "reports"}
+    preference_keys = {"location", "roles", "work_model", "mobility", "seniority", "availability",
+                       "industries", "must_haves", "exceptions", "writing", "attachments", "search", "reports"}
+    if contact:
+        preference_keys.update(("contact", "mail"))
+    if salary:
+        preference_keys.add("salary")
     public_profile = {k: profile[k] for k in ["schema_version", "name", "target_roles", "location"]}
     public_profile["export_only"] = True
     public_profile["preferences"] = {k: v for k, v in profile.get("preferences", {}).items() if k in preference_keys}

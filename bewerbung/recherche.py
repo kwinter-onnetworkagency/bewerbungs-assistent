@@ -2,6 +2,7 @@
 import base64
 from datetime import date, datetime, timezone
 from decimal import Decimal
+from difflib import unified_diff
 from html import unescape
 from html.parser import HTMLParser
 import json
@@ -153,8 +154,61 @@ def indeed_import(path, terms, region):
         retrieved = date.fromisoformat(text(entry.get("gesehen_am"), "Abrufdatum", 10))
         if retrieved > date.today():
             raise ValueError("Abrufdatum des Imports liegt in der Zukunft.")
-        yield dict(role=role, company=text(entry.get("company"), "Arbeitgeber", 500), location=place,
-                   url=url(entry.get("url") or source), indeed_url=source, gesehen_am=retrieved.isoformat())
+        ad = dict(role=role, company=text(entry.get("company"), "Arbeitgeber", 500), location=place,
+                  url=url(entry.get("url") or source), indeed_url=source, gesehen_am=retrieved.isoformat())
+        for field in ("anforderungen", "arbeitsmodell", "gehaltsangabe_der_anzeige", "description"):
+            if entry.get(field) is not None:
+                ad[field] = text(entry[field], field, 200000 if field == "description" else 20000)
+        yield ad
+
+
+def changes(previous, current):
+    compared = {}
+    for key in ("role", "description", "location", "anforderungen", "arbeitsmodell", "gehaltsangabe_der_anzeige"):
+        if key not in previous or key not in current or previous[key] == current[key]:
+            continue
+        if key == "description":
+            old, new = str(previous[key]), str(current[key])
+            if " ".join(old.split()) == " ".join(new.split()):
+                continue
+            compared[key] = {"differenz": "\n".join(unified_diff(old.splitlines(), new.splitlines(),
+                             fromfile="vorher", tofile="jetzt", lineterm=""))}
+        else:
+            compared[key] = {"vorher": previous[key], "jetzt": current[key]}
+    return compared
+
+
+def latest_fields(job):
+    state = {key: job[key] for key in ("role", "description")}
+    for observation in job.get("anzeigenstaende", []):
+        state.update(observation["angaben"])
+    return state
+
+
+def save_observation(workspace, jid, status, source, reason, fields, take=False):
+    source = url(source)
+    reason = text(reason, "Gelesene Arbeitgeberaussage oder beobachteter Zugangsfehler")
+    if take and (status != "offen" or "description" not in fields):
+        raise ValueError("Nur einen bestätigten offenen Volltext als aktuelle Anzeige übernehmen.")
+    if status == "zugang_offen" and fields:
+        raise ValueError("Bei einem Zugangsfehler sind neue Anzeigenangaben unbelegt.")
+    with workspace.locked():
+        jobs = workspace.jobs()
+        job = workspace.job(jobs, jid)
+        before = latest_fields(job)
+        row = dict(zustand=status, quelle=source, beleg=reason, angaben=fields)
+        history = job.setdefault("anzeigenstaende", [])
+        if not history or any(history[-1].get(k) != v for k, v in row.items()):
+            row.update(zeit=now(), aenderungen=changes(before, fields))
+            history.append(row)
+        if take and job["description"] != fields["description"]:
+            history[-1].setdefault("ersetzter_volltext", job["description"])
+            job["description"] = fields["description"]
+            job["qa"] = None
+            if job["status"] == "vorbereitet":
+                job["status"] = "recherche"
+        write(workspace.path("bewerbungen.json"), jobs)
+        return history[-1]
 
 
 def search(workspace, args):
@@ -166,7 +220,12 @@ def search(workspace, args):
         raise ValueError("Board-Kennung aus der Greenhouse-URL angeben.")
     if not 1 <= args.seiten <= 20 or not 0 <= args.umkreis <= 200 or not 1 <= args.tage <= 100:
         raise ValueError("Seiten 1 bis 20, Tage 1 bis 100 und Umkreis 0 bis 200 km angeben.")
-    known = {key for j in workspace.jobs() for key in (j["identity"], *j.get("identity_aliases", []))}
+    known = {key: j for j in workspace.jobs() for key in (identity(j["url"]), j["identity"], *j.get("identity_aliases", []))}
+    previous = {}
+    for saved in sorted(workspace.path("exports").glob("Suchlauf-*.json")):
+        for ad in rows(read(workspace.path(saved)), "treffer"):
+            previous.setdefault(identity(ad["url"]), {}).update({k: ad[k] for k in (
+                "role", "description", "location", "gehaltsangabe_der_anzeige", "arbeitsmodell", "anforderungen") if k in ad})
     found = {}
     coverage = []
 
@@ -178,6 +237,10 @@ def search(workspace, args):
                 key = identity(ad["url"])
                 if key not in found:
                     found[key] = dict(**ad, bekannt=key in known, fundstellen=[])
+                else:
+                    for field in ("description", "anforderungen", "arbeitsmodell", "gehaltsangabe_der_anzeige"):
+                        if field in ad:
+                            found[key].setdefault(field, ad[field])
                 # Unterschiedliche Fundquellen, Referenzen und Angaben zur selben URL erhalten.
                 provenance = {k: v for k, v in ad.items() if k in ("indeed_url", "gesehen_am", "reference", "board")}
                 link = {"quelle": source, "url": ad["url"], **info, **provenance}
@@ -201,7 +264,14 @@ def search(workspace, args):
         coverage.append(dict(quelle="Indeed", status="kein Suchergebnis importiert"))
     for index, ad in enumerate(found.values(), 1):
         ad["nummer"] = index
+        key = identity(ad["url"])
+        if key in known:
+            basis = {**latest_fields(known[key]), **previous.get(key, {})}
+            ad["aenderungen"] = changes(basis, ad)
+            ad["vergleich_mit"] = known[key]["id"]
     report = dict(abgerufen_am=now(), begriffe=terms, ort=args.ort, abdeckung=coverage, treffer=list(found.values()))
+    matched = {known[key]["id"] for key in found if key in known}
+    report["nicht_wiedergefunden"] = sorted({j["id"] for j in known.values()} - matched)
     with workspace.locked():
         stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
         path = workspace.path("exports", "Suchlauf-" + stamp + ".json")
@@ -214,6 +284,8 @@ def search(workspace, args):
               + ("; " + status["grund"] if "grund" in status else ""))
     for ad in report["treffer"][:10]:
         print(f"{ad['nummer']}. {ad['role']} | {ad.get('company') or ad.get('board') or ''} | {ad['url']}")
+        if ad.get("aenderungen"):
+            print("   Änderungen zur bekannten Anzeige: " + ", ".join(ad["aenderungen"]))
     print(f"{len(found)} unterschiedliche Treffer. Bericht: {path}")
     return path
 
@@ -292,6 +364,15 @@ def register(commands):
     take.add_argument("nummer", type=int, help="Treffernummer aus dem Bericht, ab 1")
     take.add_argument("--firma", help="Geprüfter Arbeitgebername, bei Greenhouse-Boards erforderlich")
     take.add_argument("--textdatei", type=Path, help="Gelesener Volltext, wenn im Bericht nur ein Kurztreffer steht")
+    observe = commands.add_parser("anzeigenstand", help="Eine geprüfte Änderung, Schließung oder Zugriffslücke zur Stelle dokumentieren")
+    observe.add_argument("id")
+    observe.add_argument("--zustand", choices=("offen", "geschlossen", "zugang_offen"), required=True)
+    observe.add_argument("--quelle", required=True, help="Geprüfter Original-Link")
+    observe.add_argument("--beleg", required=True, help="Gelesene Aussage zur Stelle bzw. konkreter Zugangsfehler")
+    observe.add_argument("--textdatei", type=Path, help="Gelesener voller Anzeigentext")
+    for field in ("anforderungen", "arbeitsmodell", "gehalt"):
+        observe.add_argument("--" + field)
+    observe.add_argument("--uebernehmen", action="store_true", help="Geprüften neuen Volltext in dieser Stelle verwenden")
     score = commands.add_parser("passung", help="Zielrolle und belegte Fakten mit Anzeigen vergleichen")
     group = score.add_mutually_exclusive_group(required=True)
     group.add_argument("--id")
@@ -356,6 +437,16 @@ def run(args, workspace):
         job, created = workspace.add(company, ad.get("role"), ad.get("url"), description, ad.get("reference", ""))
         workspace.add_note(job["id"], "screening", "Fundstellen im Suchlauf " + stamp, provenance, links)
         print(job["id"] + (" neu erfasst." if created else " bereits erfasst.") + " Fundstellen gespeichert.")
+    elif args.command == "anzeigenstand":
+        fields = {}
+        for key, value in (("anforderungen", args.anforderungen), ("arbeitsmodell", args.arbeitsmodell),
+                           ("gehaltsangabe_der_anzeige", args.gehalt)):
+            if value is not None:
+                fields[key] = text(value, key)
+        if args.textdatei is not None:
+            fields["description"] = text(args.textdatei.read_text(encoding="utf-8-sig"), "Volltext", 200000)
+        print(json.dumps(save_observation(workspace, args.id, args.zustand, args.quelle, args.beleg, fields, args.uebernehmen),
+                         ensure_ascii=False, indent=2))
     elif args.command == "passung":
         jobs = workspace.jobs()
         profile = workspace.profile()

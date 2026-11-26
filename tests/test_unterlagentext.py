@@ -140,7 +140,8 @@ class UnterlagenTest(unittest.TestCase):
         heading = document.paragraphs[min(document.headings)]
         for body, metadata, error in [(text, info.replace('595.28', '700'), 'Seitenformat'),
                                       (text, info.replace(self.jid, 'falsch'), 'Stellen-ID'),
-                                      (text.replace(heading + '\n', heading + ' '), info, 'Überschrift|überschrift')]:
+                                      (text.replace(heading + '\n', heading + ' '), info, 'Überschrift|überschrift'),
+                                      (text.replace(heading + '\n', heading + '\n\f'), info, 'isoliert')]:
             processes = [subprocess.CompletedProcess([], 0, body.encode()), subprocess.CompletedProcess([], 0, metadata)]
             with (patch('bewerbung.unterlagentext.shutil.which', return_value='lokal'),
                   patch('bewerbung.unterlagentext.subprocess.run', side_effect=processes),
@@ -195,7 +196,7 @@ class UnterlagenTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'PDF-Bild'):
             check_file(convert_pdf(save(self.w, plain)), doc)
         self.w.draft(self.jid, 'Dear team,\nThank you for your time.\nBest regards,', ['plaene'])
-        letter = prepare(self.w, 'anschreiben', job_id=self.jid, layout='design', language='en', signature=source)
+        letter = prepare(self.w, 'anschreiben', job_id=self.jid, layout='design', language='en', signature=source, letter_date='2026-06-15')
         self.assertEqual(letter.paragraphs[-1], 'Beispielperson')
         signed, pages, _ = save_fitted(self.w, letter)
         self.assertEqual(pages, 1)
@@ -233,8 +234,8 @@ class UnterlagenTest(unittest.TestCase):
         letter = prepare(self.w, 'anschreiben', job_id=self.jid)
         path = convert_pdf(save(self.w, letter))
         self.assertIn('1 Seite(n)', check_file(path, letter))
-        cv = prepare(self.w, 'lebenslauf', job_id=self.jid, language='en')
-        self.assertIn('lesbare Abschnittsüberschriften', check_file(convert_pdf(save(self.w, cv)), cv))
+        cv = prepare(self.w, 'lebenslauf', job_id=self.jid, language='en', page_two='seminar')
+        self.assertIn('2 Seite(n)', check_file(convert_pdf(save(self.w, cv)), cv))
         with self.assertRaisesRegex(ValueError, 'Lesereihenfolge'):
             check_file(path, cv)
         original = path.read_bytes()

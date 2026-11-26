@@ -58,7 +58,7 @@ def run(a, w):
         root.mkdir(exist_ok=True, mode=0o700)
         folder = Path(tempfile.mkdtemp(prefix="abruf-", dir=root))
         manifest = dict(konto=a.konto, ordner=a.ordner, seit=a.seit, start=now(), messages=[], errors=[],
-                        server_sync_confirmed=False)
+                        source_format="apple_mail_source_text", server_sync_confirmed=False)
         try:
             ids = call("liste", *src, str(seconds)).decode().splitlines()
             for mid in dict.fromkeys(filter(None, ids)):

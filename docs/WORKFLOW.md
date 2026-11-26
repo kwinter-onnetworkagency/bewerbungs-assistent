@@ -16,7 +16,7 @@ Die Aussage hier ist ein fiktives Syntaxbeispiel. Verwende sie nur, wenn sie bei
 
 ## 2. Stellen recherchieren
 
-`python start.py suchanfragen` zeigt Suchanfragen für deine Rollen und Region. Diese Ausgabe führt selbst keine Websuche aus. Gib sie deinem Assistenten mit verfügbaren Webwerkzeugen. Prüfe aktuelle offizielle Anzeigen, vollständige Anforderungen und einen offenen Bewerbungsweg. Quellenstand und Gehaltsband gehören zur Bewertung.
+`python start.py suchanfragen` zeigt Suchanfragen für deine Rollen und Region. Diese Ausgabe führt selbst keine Websuche aus. Gib sie deinem Assistenten mit verfügbaren Webwerkzeugen. Für einen direkten lokalen Abruf nutzt du `suchlauf`. Übernimm anschließend einen gelesenen Treffer mit `suchfund`; Parameter und Berichtsformat stehen in [Recherche](RECHERCHE.md). Prüfe aktuelle offizielle Anzeigen, vollständige Anforderungen und einen offenen Bewerbungsweg. Quellenstand und Gehaltsband gehören zur Bewertung.
 
 Speichere den vollständig gelesenen Anzeigentext als UTF-8-Datei und erfasse eine Stelle:
 
@@ -47,9 +47,9 @@ python start.py anschreiben DEINE-ID
 python start.py lebenslauf
 ```
 
-DOCX-Dateien liegen in `dokumente`. Vorhandene Dateien werden nicht überschrieben; weitere Fassungen erhalten automatisch `-v2`, `-v3` und so weiter. Der einfache Lebenslauf enthält die belegten Fakten. Individuelle Gliederung und sprachliche Überarbeitung erfolgen anschließend mit deinem Assistenten oder Textprogramm. Prüfe Seitenumbrüche und Darstellung selbst.
+DOCX-Dateien liegen in `dokumente`. Vorhandene Dateien werden nicht überschrieben; weitere Fassungen erhalten automatisch `-v2`, `-v3` und so weiter. Der einfache Lebenslauf enthält die belegten Fakten. Mit `lebenslauf --stelle DEINE-ID` und ausgewählten Fakten erzeugst du die stellenbezogene Fassung. `--sprache en` nutzt bestätigte englische Texte und Übersetzungen. [Dokumente und ATS-Lesetest](DOKUMENTE.md) Prüfe Seitenumbrüche und Darstellung selbst.
 
-Mit `--pdf` wird zusätzlich ein lokal installiertes LibreOffice genutzt. Es gibt keinen Online-Konverter. Prüfe danach die tatsächliche PDF. Belege/Nachweise hängst du entsprechend Arbeitgebervorgaben selbst an; das Grundprogramm stellt keine automatisch vollständige Anlagenmappe her.
+Mit `--pdf` wird zusätzlich ein lokal installiertes LibreOffice genutzt. Es gibt keinen Online-Konverter. Prüfe danach die tatsächliche PDF. Mit `anlage` nimmst du deine Originalnachweise auf. Ein stellenbezogener Plan bestimmt Auswahl, Grenzen, Reihenfolge und begründete Auslassungen. `anlagenpaket` baut die tatsächlichen PDFs, `paketpruefung` prüft die erhaltene Fassung erneut. [Paket und Beispiele](ANLAGEN.md)
 
 Prüfe zwei Dinge: Inhalt gegen Profil/Anzeige, dann die tatsächlich erzeugten Dokumente. Halte deine Prüfergebnisse fest:
 
@@ -59,6 +59,10 @@ python start.py ereignis DEINE-ID --status vorbereitet --datum 2026-01-15 --grun
 ```
 
 Datum durch dein tatsächliches Datum ersetzen. Die Prüfnotizen dokumentieren deine Prüfung; sie führen sie nicht automatisch durch. Nach Änderungen an Profil, Entwurf oder Anzeige ist eine erneute Prüfung erforderlich.
+
+### Empfängerseite und Formular
+
+Mit `portfolio` und `persona` bereitest du bei Bedarf eine öffentliche Startseite und eine geschützte Fassung für den konkreten Empfänger vor. Veröffentliche nur die vorgesehenen öffentlichen Dateien und prüfe anschließend die tatsächliche URL. Vor einem Portal-Upload kläre pro Feld Name, Pflichtangaben und Arbeitgeberlimit. `portal DEINE-ID --modus erkunden` ermittelt Feldinformationen. Nach dem Abgleich kann `--modus ausfuellen` im sichtbaren Browser geprüfte Werte eintragen und die zugeordneten Paketdateien auswählen. Prüfe die Uploadquittung und die abschließende Formularansicht persönlich. [Portfolio](PORTFOLIO.md) · [Portal](PORTAL.md)
 
 ## 5. Einreichen und Rückmeldungen
 
@@ -74,6 +78,10 @@ Für Mails nutze die echte Message-ID, nicht den Betreff. Bei mehreren Rollen re
 
 Alte Ereignisse können später erfasst werden. `occurred_on` ist das tatsächliche Ereignisdatum, `recorded_at` die heutige Erfassung. Ältere Eingänge überschreiben keine jüngeren Absagen. Bei gleichem Tagesdatum bleibt die fortgeschrittenere Auswahlentscheidung maßgeblich; komplizierte Rücknahmen am selben Tag musst du gesondert klären.
 
+Nach bestätigtem Versand lässt sich mit `paketzuordnung` ausschließlich eine zum Einreichungszeitpunkt bestehende Paketfassung verknüpfen. Für Originalmails kannst du `mail-erfassen` verwenden. Dort erhalten auch Eingangsbestätigungen, Rückfragen und ungeklärte Zuordnungen eine eigene Kategorie. Auf macOS unterstützt `apple-mail` den persönlichen Posteingang. `mailbericht` nennt Quellenabdeckung und offene Schritte. [Mail und Zeitpläne](ROUTINEN.md)
+
+Für eine Einladung erfasst du über `kontakt` und `termin` die bestätigten Daten. `gespraechsmappe` hält Vorbereitung und Ergebnis der konkreten Runde fest. [Gespräch, Kontakt und Termin](TERMINE.md)
+
 ## 6. Bericht und Chat-Projekt
 
 ```sh
@@ -81,6 +89,6 @@ python start.py bericht
 python start.py chat-export
 ```
 
-Der Bericht erzeugt Markdown und eine CSV mit Semikolon und UTF-8-BOM für Tabellenprogramme. Der Chat-Export enthält vier ausdrücklich ausgewählte Projektdateien, keine Originalbelege, E-Mailtexte oder Anhänge. Trotzdem enthält er persönliche Profilangaben. Prüfe alle Texte und Stellenlinks vor einem Upload.
+Der Bericht erzeugt das Dashboard, verlinkte Stellenmappen sowie Screening-, Paket- und Kohortenübersichten, außerdem Markdown und eine CSV mit Semikolon und UTF-8-BOM für Tabellenprogramme. Der Chat-Export enthält vier ausdrücklich ausgewählte Projektdateien, keine Originalbelege, E-Mailtexte oder Anhänge. Trotzdem enthält er persönliche Profilangaben. Prüfe alle Texte und Stellenlinks vor einem Upload.
 
 `PROFIL.json` und `ARBEITSSTAND.json` sind mit `export_only` gekennzeichnete Ansichten. Sie enthalten absichtlich nicht alle lokalen Daten. Ersetze damit niemals `profil.json` oder `bewerbungen.json`: Quellen, Belege und Historie würden verloren gehen. Lass dir aus dem Chat einzelne Änderungen vorschlagen und übernimm sie über `fakt`, `stelle` und `ereignis`. Hinweise auf frühere Bewerbungen bleiben im Export ausdrücklich ungeprüft, bis du Belege zugeordnet hast.

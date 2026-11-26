@@ -18,9 +18,24 @@ python start.py termin STELLEN_ID --runde fachrunde --start 2027-03-15T10:00+01:
 
 Trage die Anfangs- und Endzeit jeweils mit dem UTC-Versatz **an diesem Tag** ein. Mit `--zeitzone` prüft der Assistent den Versatz gegen die lokalen Zeitzonendaten. Die doppelte Stunde bei der Umstellung auf Winterzeit lässt sich durch `+02:00` oder `+01:00` eindeutig angeben. Die Kalenderdatei enthält UTC-Zeiten. Die gewählte Kalender-App zeigt sie in ihrer eingestellten Zeitzone an. Falls das System keine IANA-Zeitzonendaten enthält, kannst du die ausdrücklich bestätigten Versätze ohne die zusätzliche Ortszeitprüfung verwenden.
 
-Unter `gespraeche/STELLEN_ID/runde-fachrunde/Termin.ics` entsteht ein privater Kalendereintrag. Die Angabe bei `--quelle` erscheint in seiner Beschreibung. Eine kurze Bezeichnung der Einladung reicht. Die Betreffzeile mit persönlichen Einzelheiten, vertrauliche Originale und private Aktenpfade gehören dort nur hinein, wenn du sie in deinem Kalender speichern möchtest. Einen Terminvorschlag hältst du zunächst als Gesprächsnotiz mit offenem Terminstand fest.
+Unter `gespraeche/STELLEN_ID/runde-fachrunde/Termin.ics` entsteht ein privater Kalendereintrag. Die Angabe bei `--quelle` erscheint in seiner Beschreibung. Eine kurze Bezeichnung der Einladung reicht. Die Betreffzeile mit persönlichen Einzelheiten, vertrauliche Originale und private Aktenpfade gehören dort nur hinein, wenn du sie in deinem Kalender speichern möchtest. Einen Terminvorschlag kannst du als Gesprächsnotiz festhalten oder mit `--vormerkung` als ausdrücklich vorläufigen Termin kennzeichnen. Die ICS-Datei erhält dann den Status TENTATIVE.
 
 Bei einer bestätigten Verschiebung wiederholst du den Aufruf mit derselben Runden-ID, den neuen Zeiten und `--aktualisieren`. Die Datei behält ihre UID und erhält eine höhere Revisionsnummer. Der nächste identische Aufruf verändert weder Datei noch Revision.
+
+## Direkt in macOS übernehmen
+
+`--mac` veranlasst einen tatsächlichen Schreibvorgang in Apple Kontakte beziehungsweise dem ausdrücklich benannten Apple-Kalender. macOS kann für das verwendete Terminal oder die Assistenten-App eine Automationsberechtigung verlangen. Der lokale Datei-Export allein funktioniert ohne sie. Ein synchronisierter Kalender oder das Standardadressbuch kann die Daten auf deine weiteren Geräte übertragen.
+
+```sh
+python3 start.py kontakt STELLEN_ID --name "Beispielperson" --email "kontakt@example.org" --funktion "Koordination" --abteilung "Personal" --telefon "0123 100" --mobil "0123 200" --fax "0123 300" --mac
+python3 start.py termin STELLEN_ID --runde fachrunde --quelle "Terminvorschlag" --start 2027-03-15T10:00+01:00 --ende 2027-03-15T10:45+01:00 --zeitzone Europe/Berlin --vormerkung --mac --kalender "Bewerbungen"
+```
+
+Bürotelefon, Mobilnummer und Fax kannst du je Nummer wiederholen. Die Kontakte-App speichert neue Kontakte im dort gewählten Standardadressbuch. Beim Abgleich berücksichtigt das Werkzeug die genaue E-Mail-Adresse sowie Namens- und Firmenkombination. Bereits eindeutig bekannte, passende Daten werden zurückgelesen. Unklare Dubletten bleiben zur persönlichen Zuordnung offen. Änderungen am bereits bestätigten Kontakt brauchen `--aktualisieren`. Dabei bleiben andere vorhandene Telefonnummern und Anschriften erhalten.
+
+Der Kalenderabgleich prüft den ausgewählten Kalender, vorhandene native Kennungen sowie gleichnamige Termine zum selben Zeitpunkt. Die absolute Zeit bleibt auch beim Wechsel zwischen Sommer- und Winterzeit erhalten. Bei Bestätigung einer Vormerkung nutze dieselbe Runden-ID mit `--aktualisieren` und lasse `--vormerkung` weg. Es werden keine Gäste angelegt. Bestehende Termine mit Teilnehmern oder Wiederholungen bearbeitest du persönlich. Der Bewerbungsstatus bleibt unabhängig davon.
+
+Nach dem Speichern werden die angegebenen Felder anhand des nativen Datensatzes erneut gelesen. Neben der VCF- oder ICS-Datei dokumentiert `*.native.json` die bestätigte native Kennung. Bei fehlender Berechtigung, Mehrdeutigkeit oder offenem Rücklesen prüfe den Bestand, bevor du den identischen Auftrag wiederholst. Für andere Systeme nutze die VCF- beziehungsweise ICS-Datei.
 
 ## Die Datei in der eigenen App öffnen
 

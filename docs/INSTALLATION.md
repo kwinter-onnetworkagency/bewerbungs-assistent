@@ -7,7 +7,7 @@ Du kannst mit einem Chat-Projekt beginnen oder einen lokalen Arbeitsordner einri
 Mit [Node.js ab 20 samt npm](https://nodejs.org/) und [Git](https://git-scm.com/downloads) starte im Terminal:
 
 ```sh
-npx github:kwinter-onnetworkagency/bewerbungs-assistent#v0.5.1
+npx github:kwinter-onnetworkagency/bewerbungs-assistent#v0.6.0
 ```
 
 Das persönliche Portfolio ist mit **Ja** voreingestellt. Danach fragt der Wizard, ob du eine eigene Domain besitzt. Du kannst eine vorhandene Domain verbinden, eine neue bei on:NetworkAgency oder Cloudflare registrieren oder mit einer kostenlosen Pages-Adresse starten. [Portfolio einrichten](PORTFOLIO.md)
@@ -16,7 +16,7 @@ Auch ohne Dialog wird die lokale Startseite angelegt. Mit `--portfolio nein` üb
 
 Beim ersten Start kann npm um Bestätigung für den Download bitten. Der Assistent fragt nach Arbeitsumgebung, Profilname und einem neuen privaten Zielordner. Öffne diesen Ordner in Claude Code und gib `/interview` ein. In Codex starte mit `$interview`. Für ChatGPT und Claude im Browser zeigt dir der Dialog die beiden benötigten Dateien. Bereits eingerichtete Ordner bleiben erhalten.
 
-Die acht Aktionen heißen `interview`, `stellensuche`, `anschreiben`, `rueckmeldung` sowie `bericht`, `dashboard`, `gehalt` und `gespraech`. Claude Code lädt sie aus den lokalen Projektskills, Codex aus `.agents/skills`. Im Browser deutet die Projektanweisung die eingegebene Nachricht. Falls die Oberfläche den Schrägstrich abfängt, schreibe beispielsweise „Starte /interview“.
+Die [Funktionsübersicht](FUNKTIONSUMFANG.md) enthält alle Kurzbefehle von der Stellensuche bis zu Paketbau, Portal und Rückmeldungen. Claude Code lädt sie aus den lokalen Projektskills, Codex aus `.agents/skills`. Im Browser deutet die Projektanweisung die eingegebene Nachricht. Falls die Oberfläche den Schrägstrich abfängt, schreibe beispielsweise „Starte /interview“.
 
 ## ChatGPT oder Claude im Browser
 
@@ -39,6 +39,18 @@ Datei-, Projekt- und Werkzeugverfügbarkeit hängen von deinem Tarif und den Ein
 ### Voraussetzungen
 
 Python 3.11 oder neuer. Installation: [python.org](https://www.python.org/downloads/). Für das Grundprogramm brauchst du weder Git noch Zusatzpakete. Falls du PDF-Dateien automatisch aus DOCX erstellen möchtest, installiere zusätzlich [LibreOffice](https://www.libreoffice.org/download/download-libreoffice/). Du kannst DOCX auch selbst in Word öffnen und als PDF exportieren.
+
+### Optionale Werkzeuge je Aufgabe
+
+| Aufgabe | Was auf dem eigenen Rechner verfügbar sein muss |
+|---|---|
+| DOCX erstellen | Python ab 3.11. Für die Konvertierung in PDF zusätzlich LibreOffice oder ein selbst ausgeführter PDF-Export. |
+| PDF-Fassungen prüfen und bündeln | Poppler mit `pdfinfo`, `pdftotext` und für mehrteilige PDFs `pdfunite` im Suchpfad. Prüfe die Programme einzeln mit `-v`. |
+| Onlineformular vorbereiten | Node.js und die lokale Installation von Playwright und Chromium im privaten Ordner. [Einrichtung](PORTAL.md) |
+| Geschützte Portfoliofassung erzeugen | Node.js und ein eingerichtetes persönliches Portfolio. Die Veröffentlichung erfolgt über dein statisches Hosting. [Portfolio](PORTFOLIO.md) |
+| Suchlauf und Gehaltsabruf | Internetzugang. Für die direkten Dienste der Bundesagentur eigene Zugangsdaten über `BA_JOBSUCHE_API_KEY` und `BA_ENTGELTATLAS_API_KEY` lokal bereitstellen. Greenhouse-Boards können einzeln gewählt werden. [Recherche](RECHERCHE.md) |
+| Apple Mail bedienen | macOS, eingerichtetes persönliches Mailkonto und die vom System angefragte Automationserlaubnis. Ohne Apple Mail lassen sich bereitgestellte EML-Dateien mit `mail-erfassen` auswerten. |
+| Kalender und Adressbuch | ICS- bzw. VCF-Import in der persönlichen App. Für benannte Zeitzonen werden zugängliche IANA-Zeitzonendaten benötigt. [Termine](TERMINE.md) |
 
 ### macOS
 
@@ -113,6 +125,6 @@ Quellenstand 24.11.2026. Bedienoberflächen und Tarife können sich ändern:
 - [Claude Code: Skills aufrufen](https://code.claude.com/docs/en/skills)
 - [Codex: Skills nutzen](https://developers.openai.com/codex/skills/)
 
-Bei einem Update von v0.1.0 kopiere zusätzlich `resources/ASSISTENT.txt` in deine Projektanweisungen (eigene Regeln beibehalten). Für native Aufrufe kopiere die Unterordner aus `resources/skills/` nach `.claude/skills/` (Claude Code) bzw. `.agents/skills/` (Codex). Gleichnamige eigene Skills vorher vergleichen. Öffne den persönlichen Ordner erneut.
+Bei einem Update auf v0.6.0 kopiere zusätzlich `resources/ASSISTENT.txt` in deine Projektanweisungen (eigene Regeln beibehalten). Für native Aufrufe kopiere die Unterordner aus `resources/skills/` nach `.claude/skills/` (Claude Code) bzw. `.agents/skills/` (Codex). Gleichnamige eigene Skills vorher vergleichen. Öffne den persönlichen Ordner erneut.
 
 Ab Version 0.3 findest du die persönliche Übersicht in `exports/Dashboard.html`. Bestehende Installationen wie oben aktualisieren, dabei die Programmvorlagen aus `resources/` übernehmen und die eigenen Arbeitsdaten erhalten. Beim nächsten Bericht wird das Dashboard neu erzeugt. Für Browserprojekte kann [der Arbeitsleitfaden](ARBEITSPLATZ.md) zusätzlich hochgeladen werden.

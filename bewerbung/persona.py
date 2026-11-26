@@ -116,7 +116,11 @@ def public_page(w, payload):
         if target.exists():
             previous = target.read_bytes()
             saved = w.path("portfolio", "entwuerfe", hashlib.sha256(previous).hexdigest() + ".html")
-            managed = previous in (starter.encode(), page) or saved.is_file() and saved.read_bytes() == previous
+            # Der Wizard schrieb ältere Windows-Startseiten mit nativen CRLF-Zeilenenden.
+            starter_bytes = starter.encode()
+            managed = previous in (starter_bytes, starter_bytes.replace(b"\n", b"\r\n"), page)
+            if not managed and saved.is_file():
+                managed = saved.read_bytes() == previous
         else:
             managed = True
         draft = w.path("portfolio", "entwuerfe", hashlib.sha256(page).hexdigest() + ".html")

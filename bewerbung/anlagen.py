@@ -1,5 +1,8 @@
 """Private PDF-Quellen und stellenspezifische, inhaltsadressierte Paketfassungen."""
+from collections import Counter
 from datetime import datetime
+from email import policy
+from email.parser import BytesParser
 import hashlib
 import json
 import os
@@ -287,11 +290,17 @@ def checked_cv_files(workspace, jid, version):
 
 def is_application_artifact(workspace, checksum):
     """Ein eigener Anhang, lokaler Text oder Paketnachweis belegt keinen Versand."""
-    for base in ("dokumente", "anlagen"):
+    for base in ("dokumente", "anlagen", "exports", "portfolio"):
         for path in workspace.path(base).rglob("*"):
             if path.is_file() and not path.is_symlink() and digest(workspace.path(path)) == checksum:
                 return True
     for job in workspace.jobs():
+        # Browser previews and field/upload receipts describe the state before submission.
+        portal = workspace.path("unterlagen", job["id"], "portal")
+        for pattern in ("lauf-*/*", "portal.json"):
+            for path in portal.glob(pattern):
+                if path.is_file() and not path.is_symlink() and digest(workspace.path(path)) == checksum:
+                    return True
         drafts = [job.get("draft"), *(d.get("draft") for d in job.get("draft_history", []))]
         for draft in filter(None, drafts):
             body = draft["text"]
@@ -329,12 +338,27 @@ def associate(workspace, jid, version, index, reason, *, vorlage=None, vorlagenv
             raise ValueError("Die Fassung entstand nach der belegten Einreichung.")
         attributes = {name: text(value, name, 200) for name, value in
                       (("vorlage", vorlage), ("vorlagenversion", vorlagenversion), ("kanal", kanal)) if value is not None}
+        assignment = "nutzerzuordnung"
+        original = (event.get("mail") or {}).get("original") or proof
+        eml = workspace.path(original["file"])
+        if eml.suffix.lower() == ".eml":
+            if not eml.is_file() or digest(eml) != original.get("sha256"):
+                raise ValueError("Das zugeordnete Mailoriginal fehlt oder wurde verändert.")
+            message = BytesParser(policy=policy.default).parsebytes(eml.read_bytes())
+            attachments = []
+            for part in message.walk():
+                if (part.get_filename() or part.get_content_disposition() == "attachment") and not part.is_multipart():
+                    data = part.get_payload(decode=True)
+                    if data is not None and (part.get_content_type() == "application/pdf" or data.startswith(b"%PDF-")):
+                        attachments.append(hashlib.sha256(data).hexdigest())
+            if Counter(attachments) == Counter(row["sha256"] for row in manifest["dateien"]):
+                assignment = "anhang_hash"
         previous = event.get("eingereichtes_paket")
         if previous:
             if previous["fassung"] != version or any(previous.get(k) != v for k, v in attributes.items()):
                 raise ValueError("Diesem Ereignis ist bereits eine andere Fassung zugeordnet.")
             return
-        event["eingereichtes_paket"] = dict(fassung=version, grund=reason, erfasst=now(), **attributes)
+        event["eingereichtes_paket"] = dict(fassung=version, grund=reason, erfasst=now(), zuordnung=assignment, **attributes)
         write(workspace.path("bewerbungen.json"), jobs)
 
 

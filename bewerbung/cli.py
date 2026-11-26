@@ -7,7 +7,7 @@ import sys
 
 from . import __version__
 from .core import NOTE_TYPES, Workspace, validate_profile, write, keyword_match, search_queries
-from .documents import convert_pdf
+from .documents import convert_pdf, office_binary
 from . import anlagen, applemail, mailstand, persona, portal, recherche, unterlagentext, termine
 from .gehalt import marktwert
 from .export import report, chat_bundle
@@ -85,7 +85,9 @@ def parser():
     for module in (anlagen, applemail, mailstand, persona, portal, recherche, unterlagentext, termine):
         module.register(commands)
     commands.add_parser("bericht", help="Markdown-Übersicht und CSV-Tabelle erzeugen")
-    commands.add_parser("chat-export", help="Vier selbst zu prüfende Dateien für ein privates Chat-Projekt bündeln")
+    chat = commands.add_parser("chat-export", help="Vier selbst zu prüfende Dateien für ein privates Chat-Projekt bündeln")
+    chat.add_argument("--mit-kontakt", action="store_true", help="Private Kontakt- und Mailangaben ausdrücklich aufnehmen")
+    chat.add_argument("--mit-gehalt", action="store_true", help="Persönliche Gehaltspräferenz ausdrücklich aufnehmen")
     routine = commands.add_parser("routine", help="Vorlagen für vom Nutzer einzurichtende Routinen anzeigen")
     routine.add_argument("art", choices=["stellensuche", "rueckmeldungen"])
     return p
@@ -111,7 +113,12 @@ def main(argv=None):
             print(f"Version {__version__} | Python {sys.version.split()[0]} | Profil gültig, {len(profile['facts'])} Fakten")
             print("Claude Code: " + ("gefunden" if shutil.which("claude") else "optional, nicht gefunden"))
             print("Codex: " + ("gefunden" if shutil.which("codex") else "optional, nicht gefunden"))
-            print("Mail-/Browserzugriff und Hintergrundroutinen: nicht durch dieses Programm eingerichtet.")
+            import platform
+            print("PDF-Konvertierung: " + ("verfügbar" if office_binary() else "LibreOffice optional installieren"))
+            for tool in ("pdfinfo", "pdftotext", "pdfunite"):
+                print(f"{tool}: " + ("gefunden" if shutil.which(tool) else "Poppler für PDF-Prüfung/Pakete installieren"))
+            print("Apple Mail, Kalender und Kontakte: " + ("macOS, App-Zugriff separat prüfen" if platform.system() == "Darwin" else "EML, ICS und VCF verwenden"))
+            print("Mail-/Browserzugriff und Hintergrundroutinen: persönliche Einrichtung erforderlich.")
             if not profile["facts"]:
                 print("Nächster Schritt: belegte Profilfakten ergänzen. Noch keine Unterlagen erzeugen.")
         elif a.command == "fakt":
@@ -157,7 +164,7 @@ def main(argv=None):
             print(report(w))
             print(w.path("exports", "Dashboard.html"))
         elif a.command == "chat-export":
-            print(chat_bundle(w))
+            print(chat_bundle(w, contact=a.mit_kontakt, salary=a.mit_gehalt))
             print("Enthält dein Profil. Lokal entpacken, Dateien prüfen und einzeln in dein privates Projekt hochladen.")
         elif a.command == "routine":
             filename = "STELLENSUCHE.txt" if a.art == "stellensuche" else "RUECKMELDUNGEN.txt"

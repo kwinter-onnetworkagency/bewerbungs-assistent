@@ -170,3 +170,57 @@ class RechercheTest(unittest.TestCase):
                 with self.subTest(response=response), patch.object(r, "fetch", return_value=response), self.assertRaises(ValueError):
                     self.command("entgeltatlas", "--id", jid, "--kldb", "83112", "--niveau", "2")
         self.assertFalse(self.w.jobs()[0].get("notes"))
+
+    def test_provider_urls_variants_and_legacy_jobs(self):
+        ashby = "bfeae0f2-6440-476d-80bd-42e6f664d596"
+        pairs = [
+            (f"https://jobs.ashbyhq.com/demo/{ashby}", f"https://jobs.ashbyhq.com/demo/{ashby}/application?src=X"),
+            ("https://demo.wd5.myworkdayjobs.com/en-US/site/job/Berlin/Old_JR-914",
+             "https://demo.wd3.myworkdayjobs.com/de-DE/site/job/New_JR-914/apply"),
+            ("https://www.smartrecruiters.com/Demo/12345678-first-role",
+             "https://jobs.smartrecruiters.com/Demo/12345678-new-role?trid=123"),
+            ("https://demo.recruitee.com/o/first-role", "https://demo.recruitee.com/l/de/o/first-role/c/new"),
+        ]
+        for old, new in pairs:
+            with self.subTest(old=old):
+                self.assertEqual(r.identity(old), r.identity(new))
+                self.assertNotEqual(r.identity(new), r.identity(new.replace("demo", "other").replace("Demo", "Other")))
+                job, _ = self.w.add("Arbeitgeber", "Rolle", old, "Ursprung")
+                jobs = self.w.jobs()
+                self.w.job(jobs, job["id"])["identity"] = old
+                write(self.w.path("bewerbungen.json"), jobs)
+                again, created = self.w.add("Arbeitgeber", "Rolle", new, "Änderung")
+                self.assertFalse(created)
+                self.assertEqual(job["id"], again["id"])
+
+    def test_known_changes_closure_and_access_are_separate(self):
+        jid = self.job()
+        job = self.w.jobs()[0]
+        found = self.root / "indeed.json"
+        sample = dict(role="Disposition", company="Testbetrieb", location="Bonn", gesehen_am="2024-08-02",
+                      indeed_url="https://de.indeed.com/viewjob?jk=abc", url=job["url"],
+                      anforderungen="Deutsch", arbeitsmodell="Remote", gehaltsangabe_der_anzeige="50.000 EUR")
+        with patch.dict(os.environ, {"BA_JOBSUCHE_API_KEY": ""}):
+            write(found, [sample])
+            self.search("--indeed-datei", str(found))
+            changed = {**sample, "anforderungen": "Deutsch und Englisch", "arbeitsmodell": "Hybrid",
+                       "gehaltsangabe_der_anzeige": "55.000 EUR", "description": "Aktuelle Anforderungen"}
+            write(found, [changed])
+            ad = self.search("--indeed-datei", str(found))["treffer"][0]
+            self.assertEqual(set(ad["aenderungen"]), {"anforderungen", "arbeitsmodell", "gehaltsangabe_der_anzeige", "description"})
+            self.assertEqual(ad["aenderungen"]["arbeitsmodell"], {"vorher": "Remote", "jetzt": "Hybrid"})
+            report = self.search()
+            self.assertEqual(report["nicht_wiedergefunden"], [jid])
+            self.assertEqual(self.w.jobs()[0]["description"], job["description"])
+        base = ["anzeigenstand", jid, "--quelle", job["url"]]
+        self.command(*base, "--zustand", "zugang_offen", "--beleg", "HTTP 403")
+        self.command(*base, "--zustand", "geschlossen", "--beleg", "Anzeige meldet, die Bewerbungsfrist sei beendet.")
+        self.command(*base, "--zustand", "geschlossen", "--beleg", "Anzeige meldet, die Bewerbungsfrist sei beendet.")
+        new = self.root / "aktuell.txt"
+        new.write_text("Neue Bedingungen", encoding="utf-8")
+        self.command(*base, "--zustand", "offen", "--beleg", "Wieder ausgeschrieben", "--textdatei", str(new), "--uebernehmen")
+        current = self.w.jobs()[0]
+        self.assertEqual(current["description"], "Neue Bedingungen")
+        self.assertEqual(current["anzeigenstaende"][-1]["ersetzter_volltext"], job["description"])
+        self.assertEqual([s["zustand"] for s in current["anzeigenstaende"]], ["zugang_offen", "geschlossen", "offen"])
+        self.assertEqual(current["events"], [])

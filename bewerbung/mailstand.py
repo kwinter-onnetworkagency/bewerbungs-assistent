@@ -60,6 +60,27 @@ def mail_items(w):
     return rows
 
 
+def unresolved_by_id(w, mid):
+    path = w.path("mail-ungeklaert.json")
+    if path.exists():
+        return next((r for r in read(path) if r["message_id"] == mid), None)
+
+
+def reconcile(prior, data):
+    if prior["sha256"] != data["sha256"]:
+        raise ValueError("Dieselbe Message-ID mit abweichendem Original. Konten und Kopien manuell klären.")
+    if prior.get("account") and data.get("account") and prior["account"] != data["account"]:
+        raise ValueError("Message-ID bereits für ein anderes Konto dokumentiert.")
+    updated = dict(data)
+    updated["account"] = data.get("account") or prior.get("account")
+    updated["protected"] = prior.get("protected", False) or data["protected"]
+    updated["next_step"] = data.get("next_step") or prior.get("next_step", "")
+    for key in ("captured_at", "original"):
+        if key in prior:
+            updated[key] = prior[key]
+    return updated
+
+
 def capture(w, a):
     source = Path(a.eml)
     data = mail_info(source)
@@ -67,23 +88,25 @@ def capture(w, a):
     folder = text(a.ablage, "Tatsächlicher Ordner")
     data.update(folder=folder, next_step=a.schritt or "", protected=a.schuetzen, account=getattr(a, "konto", None),
                 direction=a.richtung)
-    prior = next((r for r in mail_items(w) if r["message_id"] == data["message_id"]), None)
-    if prior:
-        if prior.get("sha256") != data["sha256"]:
-            raise ValueError("Dieselbe Message-ID mit abweichendem Original. Konten und Kopien manuell klären.")
-        data["protected"] |= prior["protected"]
-        if prior["kind"] != "ungeklaert" and a.art != prior["kind"]:
-            raise ValueError("Die Message-ID ist bereits mit einem anderen Ergebnis erfasst.")
     if not a.stelle:
         if a.art != "ungeklaert":
             raise ValueError("Eindeutige Stellen-ID angeben oder als ungeklärt erfassen.")
         with w.locked():
-            if any(r["message_id"] == data["message_id"] for r in mail_items(w)):
-                return False
             path = w.path("mail-ungeklaert.json")
             rows = read(path) if path.exists() else []
+            current = next((r for r in mail_items(w) if r["message_id"] == data["message_id"]), None)
+            if current:
+                if current["kind"] != "ungeklaert":
+                    raise ValueError("Nachricht ist bereits eindeutig zugeordnet.")
+                updated = reconcile(current, data)
+                if all(current.get(k) == v for k, v in updated.items()):
+                    return False
+                row = next(r for r in rows if r["message_id"] == data["message_id"])
+                row.update(updated)
+                write(path, rows)
+                return True
             rows.append(dict(data, kind=a.art, company="", role="", reference="", reason=reason,
-                             recorded_at=now(), evidence=w.evidence(source)))
+                             recorded_at=now(), evidence=w.evidence(source, expected_hash=data["sha256"])))
             write(path, rows)
         return True
     if a.art == "ungeklaert":

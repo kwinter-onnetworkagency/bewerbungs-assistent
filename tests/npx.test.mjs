@@ -6,7 +6,8 @@ import path from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 const launcher = fileURLToPath(new URL('../bin/start.mjs', import.meta.url))
-const commands = ['interview','stellensuche','anschreiben','rueckmeldung','bericht','dashboard','gehalt','gespraech']
+const commands = ['interview','stellensuche','anschreiben','rueckmeldung','bericht','dashboard','gehalt','gespraech',
+  'lebenslauf','anlagen','portal','portfolio','persona','kontakt','termin','mail','routine']
 function setup(dest, mode) {
   return spawnSync(process.execPath, [launcher, '--assistent', mode, '--ziel', dest, '--name', 'Testperson'], {encoding: 'utf8'})
 }
@@ -98,5 +99,27 @@ test('Unzulässige Wunschdomain bricht vor dem Anlegen des Ordners ab', t => {
     assert.equal(run.status, 1)
     assert.match(run.stderr, /Wunschdomain/)
     assert.ok(!fs.existsSync(dest))
+  }
+})
+
+test('Funktionen, Kurzbefehle und weiterführende Anleitung sind vollständig installiert', t => {
+  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'bewerbung-matrix-'))
+  t.after(() => fs.rmSync(scratch, {recursive:true,force:true}))
+  const dest = path.join(scratch, 'privat')
+  const result = setup(dest, 'codex')
+  assert.equal(result.status, 0, result.stderr)
+  const skills = fs.readdirSync(path.join(dest, '.agents', 'skills')).sort()
+  assert.deepEqual(skills, [...commands].sort())
+  const matrix = fs.readFileSync(path.join(dest, 'docs', 'FUNKTIONSUMFANG.md'), 'utf8')
+  for (const name of commands) assert.ok(matrix.includes('`/' + name + '`'), name)
+  for (const match of matrix.matchAll(/\]\(([^)]+\.md)\)/g)) {
+    assert.ok(fs.existsSync(path.resolve(dest, 'docs', match[1])), match[1])
+  }
+  const python = process.platform === 'win32' ? 'python' : 'python3'
+  const help = spawnSync(python, ['start.py', '--help'], {cwd: dest, encoding: 'utf8'})
+  assert.equal(help.status, 0, help.stderr)
+  const cli = new Set(help.stdout.match(/\{(einrichten,[a-z,-]+)\}/)[1].split(','))
+  for (const match of matrix.matchAll(/`([a-z][a-z-]*)`/g)) {
+    assert.ok(cli.has(match[1]), 'Befehl aus der Funktionsübersicht fehlt: ' + match[1])
   }
 })

@@ -78,6 +78,22 @@ def identity(value, reference="", company=""):
         return f"lever:{parts[0].lower()}:{parts[1]}"
     if host.endswith((".jobs.personio.de", ".jobs.personio.com")) and len(parts) >= 2 and parts[0] == "job":
         return f"personio:{host.split('.')[0]}:{parts[1]}"
+    if host == "jobs.ashbyhq.com" and len(parts) >= 2 and re.fullmatch(
+            r"[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}", parts[1], re.I):
+        return f"ashby:{parts[0].lower()}:{parts[1].lower()}"
+    if host in {"www.smartrecruiters.com", "jobs.smartrecruiters.com"} and len(parts) >= 2:
+        ref = re.fullmatch(r"([0-9]+)(?:-.+)?", parts[1])
+        if ref:
+            return f"smartrecruiters:{parts[0].lower()}:{ref[1]}"
+    if re.fullmatch(r"[a-z0-9-]+\.wd[0-9]+\.myworkdayjobs\.com", host) and "job" in parts:
+        for part in parts[parts.index("job") + 1:]:
+            ref = re.fullmatch(r".+_([A-Za-z0-9-]*[0-9][A-Za-z0-9-]*)", part)
+            if ref:
+                return f"workday:{host.split('.')[0]}:{ref[1].upper()}"
+    if host.endswith(".recruitee.com") and "o" in parts:
+        position = parts.index("o")
+        if position + 1 < len(parts) and re.fullmatch(r"[a-zA-Z0-9_-]+", parts[position + 1]):
+            return f"recruitee:{host}:{parts[position + 1].lower()}"
     query = [(k, v) for k, v in parse_qsl(p.query, keep_blank_values=True)
              if not k.lower().startswith("utm_") and k.lower() not in {"gh_src", "source", "ref", "referrer"}]
     return urlunsplit((p.scheme.lower(), p.netloc.lower(), p.path.rstrip("/"), urlencode(sorted(query)), p.fragment))
@@ -180,7 +196,7 @@ class Workspace:
         key = identity(link, reference, company)
         with self.locked():
             jobs = self.jobs()
-            matches = [item for item in jobs if item["identity"] == key or key in item.get("identity_aliases", []) or
+            matches = [item for item in jobs if item["identity"] == key or identity(item["url"]) == key or key in item.get("identity_aliases", []) or
                        (reference and item.get("reference") and item["company"].casefold() == company.casefold()
                         and item["reference"].casefold() == reference.casefold())]
             if len(matches) > 1:
@@ -266,9 +282,7 @@ class Workspace:
             if hashlib.sha256(dest.read_bytes()).hexdigest() != digest:
                 raise ValueError("Gespeicherter Nachweis wurde verändert. Original und Kopie manuell prüfen.")
         else:
-            with dest.open("xb") as f:
-                f.write(data)
-            dest.chmod(0o600)
+            write_bytes(dest, data)
         return {"file": str(dest.relative_to(self.root)), "sha256": digest}
 
     def record(self, jid, status, source, occurred, note, message_id="", *, mail=None):
@@ -290,14 +304,26 @@ class Workspace:
         with self.locked():
             jobs = self.jobs()
             item = self.job(jobs, jid)
+            if mail:
+                from .mailstand import reconcile, unresolved_by_id
+                pending = unresolved_by_id(self, message_id)
+                if pending:
+                    mail = reconcile(pending, mail)
             if message_id:
                 for job in jobs:
                     previous = next((e for e in job["events"] if e.get("message_id") == message_id), None)
                     if previous:
                         if job["id"] != jid:
                             raise ValueError("Message-ID ist bereits einer anderen Stelle zugeordnet.")
-                        if mail and status != previous["status"]:
+                        if status != previous["status"]:
                             raise ValueError("Diese Nachricht hat bereits ein anderes dokumentiertes Ergebnis.")
+                        if mail and previous.get("mail"):
+                            updated = reconcile(previous["mail"], mail)
+                            if updated != previous["mail"]:
+                                previous.setdefault("mail_history", []).append(dict(previous["mail"], revised_at=now()))
+                                previous["mail"] = updated
+                                write(self.path("bewerbungen.json"), jobs)
+                                return True
                         if mail and not previous.get("mail"):
                             proof = self.evidence(source, expected_hash=mail["sha256"], for_submission=status == "beworben")
                             previous["mail"] = dict(mail, captured_at=now(), original=proof)

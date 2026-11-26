@@ -84,6 +84,17 @@ class PersonaTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.command("portfolio", "--fakt", "test", "--link", "Beispiel", "javascript:void(0)")
 
+    def test_windows_wizard_start_page_and_hand_edited_crlf(self):
+        page = self.w.path("portfolio", "public", "index.html")
+        crlf = page.read_text(encoding="utf-8").replace("\n", "\r\n").encode()
+        self.assertIn(b"\r\n", crlf)
+        page.write_bytes(crlf)
+        self.assertIn("lokal vorbereitet", self.command("portfolio", "--fakt", "test"))
+        edited = crlf + b"<!-- eigene Notiz -->\r\n"
+        page.write_bytes(edited)
+        self.assertIn("eigene Änderungen", self.command("portfolio", "--fakt", "test"))
+        self.assertEqual(page.read_bytes(), edited)
+
     def test_optional_public_site_and_live_stale_page(self):
         other = self.w.root.parent / "ohne-portfolio"
         empty = Workspace(initialize(other, "Beispiel", [], "", "chatgpt", portfolio=False))

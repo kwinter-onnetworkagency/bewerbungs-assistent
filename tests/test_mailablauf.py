@@ -98,3 +98,22 @@ class MailTest(unittest.TestCase):
         report = self.report("--tag")
         self.assertIn("Arbeitgebereingänge heute: 1. Eigene Nachrichten: 1. Servicenachrichten: 1.", report)
         self.assertNotIn("Bestaetigung lesen", report)
+
+    def test_supplemental_protection_and_proof_rejection(self):
+        self.capture("eingang", "--stelle", self.j)
+        self.assertTrue(self.capture("eingang", "--stelle", self.j, "--schuetzen", "--schritt", "Lesen"))
+        self.assertTrue(self.w.jobs()[0]["events"][0]["mail"]["protected"])
+        with self.assertRaisesRegex(ValueError, "anderes dokumentiertes Ergebnis"):
+            self.w.record(self.j, "absage", self.file, "2026-02-10", "Widersprüchlich", "case@example.org")
+        with patch.object(applemail, "call") as api, self.assertRaisesRegex(ValueError, "ungesch"):
+            applemail.run(self.move, self.w)
+        api.assert_not_called()
+        fake = self.w.path("unterlagen", self.j, "portal", "lauf-test", "vorschau.png")
+        fake.parent.mkdir(parents=True)
+        fake.write_bytes(b"pre-submission only")
+        copied = self.file.parent / "beleg.png"
+        copied.write_bytes(fake.read_bytes())
+        previous = set(self.w.path("belege").iterdir())
+        with self.assertRaisesRegex(ValueError, "kein Versandbeleg"):
+            self.w.record(self.j, "beworben", copied, "2026-02-10", "Versuch einer falschen Zuordnung")
+        self.assertEqual(set(self.w.path("belege").iterdir()), previous)

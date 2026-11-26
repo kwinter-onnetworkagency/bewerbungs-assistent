@@ -77,3 +77,18 @@ python3 start.py entgeltatlas --kldb 83112 --niveau 2 --region 1 --id JOB-ID
 Die Ausgabe enthält den Vollzeit-Bruttomonatsmedian, das untere und das obere Quartil, soweit ausgewiesen. Eine Jahreshochrechnung entspricht zwölf Monatswerten. Bei unterdrückten Werten steht die Kennzahl auf `null`, der Originalcode bleibt unter `quellwerte` erhalten. Der Abrufzeitpunkt ist separat ausgewiesen. Mit `--id` wird das Ergebnis als Marktvergleich zur Stelle abgelegt. Anbieterfehler führen zu einer Fehlermeldung. Eine gültige leere Ergebnisliste bleibt leer.
 
 Ein in der Quelle belegter Durchschnitt, etwa bei Indeed Gehälter, lässt sich mit dem bestehenden Befehl `gehaltswert` erfassen. Gib Bezugsgruppe, Region, Basis, Datenstand und Originalkennzahl an. Das Budget des konkreten Arbeitgebers braucht eine eigene Quelle. [Indeed Gehälter](https://de.indeed.com/career/salaries)
+
+## Änderungen und offene Zugänge verfolgen
+
+Bei bereits bekannten Stellen enthält der Suchbericht die Stellen-ID und einen Vergleich der erneut gelieferten Angaben mit dem vorherigen Suchstand. Bei Volltexten steht der Textunterschied im Bericht. Ein Indeed-Import kann zusätzlich die tatsächlich gelesenen Felder `anforderungen`, `arbeitsmodell`, `gehaltsangabe_der_anzeige` und `description` enthalten. Fehlt ein Wert beim Abruf, bleibt die Änderung offen. `nicht_wiedergefunden` gilt nur für diesen Suchlauf und dessen Filter.
+
+Mit `anzeigenstand` dokumentierst du eine tatsächlich gelesene Arbeitgeberaussage. Ein Login, ein HTTP-Fehler oder ein nicht wiedergefundener Treffer lässt die Erreichbarkeit offen. Für eine bestätigte Schließung gib die geprüfte Originaladresse und den Wortlaut des Arbeitgebers an. Diese Angaben verändern keinen Bewerbungsstatus.
+
+```sh
+python start.py anzeigenstand JOB-ID --zustand zugang_offen --quelle https://example.org/stelle --beleg "Login erforderlich"
+python start.py anzeigenstand JOB-ID --zustand offen --quelle https://example.org/stelle --beleg "Aktuelle Stellenanzeige gelesen" --arbeitsmodell "Zwei Präsenztage pro Woche" --textdatei anzeige.txt --uebernehmen
+```
+
+Die ausdrückliche Übernahme ersetzt den aktuellen Anzeigentext, archiviert den vorigen und hebt eine frühere Prüfung auf. Für die reine Beobachtung lässt du `--uebernehmen` weg.
+
+Stellen- und Bewerbungslinks werden bei bekannten URL-Mustern über Anbieter, Arbeitgeber und Stellenkennung zusammengeführt. Das umfasst Ashby-UUIDs, Workday-Requisitionsnummern, numerische SmartRecruiters-Kennungen sowie die Stellen- und Formularansicht desselben Recruitee-Slugs. Neue Recruitee-Slugs oder eigene Arbeitgeberdomains benötigen bei fehlender gemeinsamer Kennung die geprüfte Firmenreferenz. [Ashby Job Posting](https://developers.ashbyhq.com/reference/jobpostinglist) · [SmartRecruiters Job Postings](https://developers.smartrecruiters.com/docs/get-job-postings) · [Recruitee-Formularadressen](https://support.recruitee.com/en/articles/1066259-create-an-application-form-for-each-job)
